@@ -28,6 +28,7 @@ import io.github.silentdevelopment.headdb.paper.local.storage.SqliteStorageMigra
 import io.github.silentdevelopment.headdb.paper.local.storage.StrataLocalStores;
 import io.github.silentdevelopment.headdb.paper.local.storage.NoopLocalStores;
 import io.github.silentdevelopment.headdb.paper.message.Messages;
+import io.github.silentdevelopment.headdb.paper.metrics.HeadDBMetrics;
 import io.github.silentdevelopment.headdb.paper.prompt.PromptInputService;
 import io.github.silentdevelopment.headdb.paper.runtime.PluginRuntime;
 import io.github.silentdevelopment.headdb.paper.runtime.RuntimeDiagnostics;
@@ -162,6 +163,8 @@ public final class HeadDBPlugin extends JavaPlugin {
         RuntimeDiagnostics.logRuntimeState(this, createdRuntime);
 
         registerServices();
+
+        HeadDBMetrics.register(this);
     }
 
     public @NotNull HeadItemFactory itemFactory() {

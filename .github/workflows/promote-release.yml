@@ -1,0 +1,248 @@
+# .github/workflows/promote-release.yml
+
+name: Promote Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: Existing build release tag to promote, for example v7.0.0-rc.1+build.7
+        required: true
+        type: string
+      target_tag:
+        description: Clean public release tag, for example v7.0.0-rc.1. Leave empty to strip +build.N automatically.
+        required: false
+        type: string
+      publish_modrinth:
+        description: Publish promoted release to Modrinth
+        required: true
+        default: true
+        type: boolean
+      publish_hangar:
+        description: Publish promoted release to Hangar
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-release-${{ inputs.source_tag }}-${{ inputs.target_tag }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Resolve promotion metadata
+        id: meta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          source_tag="${{ inputs.source_tag }}"
+          target_tag="${{ inputs.target_tag }}"
+
+          if [[ "$source_tag" != v* ]]; then
+            source_tag="v${source_tag}"
+          fi
+
+          if [[ -z "$target_tag" ]]; then
+            if [[ "$source_tag" != *+build.* ]]; then
+              echo "target_tag is required when source_tag does not contain +build." >&2
+              exit 1
+            fi
+
+            target_tag="${source_tag%%+build.*}"
+          fi
+
+          if [[ "$target_tag" != v* ]]; then
+            target_tag="v${target_tag}"
+          fi
+
+          if [[ "$target_tag" == *+build.* ]]; then
+            echo "target_tag must be a clean public tag without +build metadata." >&2
+            exit 1
+          fi
+
+          if [[ "$source_tag" == "$target_tag" ]]; then
+            echo "source_tag and target_tag must be different." >&2
+            exit 1
+          fi
+
+          if ! gh release view "$source_tag" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Source release does not exist: ${source_tag}" >&2
+            exit 1
+          fi
+
+          if gh release view "$target_tag" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Target release already exists: ${target_tag}" >&2
+            exit 1
+          fi
+
+          source_commit="$(
+            gh release view "$source_tag" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json targetCommitish \
+              --jq '.targetCommitish'
+          )"
+
+          if [[ -z "$source_commit" || "$source_commit" == "null" ]]; then
+            echo "Could not resolve target commit from source release: ${source_tag}" >&2
+            exit 1
+          fi
+
+          source_url="$(
+            gh release view "$source_tag" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json url \
+              --jq '.url'
+          )"
+
+          target_version="${target_tag#v}"
+
+          github_prerelease="false"
+          modrinth_channel="release"
+          hangar_channel="Release"
+
+          if [[ "$target_version" == *alpha* ]]; then
+            github_prerelease="true"
+            modrinth_channel="alpha"
+            hangar_channel="Alpha"
+          elif [[ "$target_version" == *-* ]]; then
+            github_prerelease="true"
+            modrinth_channel="beta"
+            hangar_channel="Beta"
+          fi
+
+          echo "source_tag=${source_tag}" >> "$GITHUB_OUTPUT"
+          echo "target_tag=${target_tag}" >> "$GITHUB_OUTPUT"
+          echo "target_version=${target_version}" >> "$GITHUB_OUTPUT"
+          echo "source_commit=${source_commit}" >> "$GITHUB_OUTPUT"
+          echo "source_url=${source_url}" >> "$GITHUB_OUTPUT"
+          echo "github_prerelease=${github_prerelease}" >> "$GITHUB_OUTPUT"
+          echo "modrinth_channel=${modrinth_channel}" >> "$GITHUB_OUTPUT"
+          echo "hangar_channel=${hangar_channel}" >> "$GITHUB_OUTPUT"
+
+      - name: Download source release jar
+        id: asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist/source dist/promoted
+
+          gh release download "${{ steps.meta.outputs.source_tag }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "HeadDB-*.jar" \
+            --dir dist/source
+
+          mapfile -t jars < <(find dist/source -maxdepth 1 -type f -name 'HeadDB-*.jar' | sort)
+
+          if [[ "${#jars[@]}" -ne 1 ]]; then
+            echo "Expected exactly one HeadDB jar in source release, found ${#jars[@]}." >&2
+            printf '%s\n' "${jars[@]}" >&2
+            exit 1
+          fi
+
+          promoted_jar="dist/promoted/HeadDB-${{ steps.meta.outputs.target_version }}.jar"
+          cp "${jars[0]}" "$promoted_jar"
+
+          echo "jar=${promoted_jar}" >> "$GITHUB_OUTPUT"
+
+      - name: Create release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > release-notes.md <<'EOF'
+          HeadDB ${{ steps.meta.outputs.target_version }}
+
+          This release promotes an already-built GitHub release artifact.
+
+          Source build: ${{ steps.meta.outputs.source_tag }}
+          Source release: ${{ steps.meta.outputs.source_url }}
+          Source commit: ${{ steps.meta.outputs.source_commit }}
+
+          The attached jar is the promoted jar from the source build release.
+          EOF
+
+      - name: Create promoted GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          args=(
+            "${{ steps.meta.outputs.target_tag }}"
+            "${{ steps.asset.outputs.jar }}"
+            --repo "${GITHUB_REPOSITORY}"
+            --target "${{ steps.meta.outputs.source_commit }}"
+            --title "HeadDB ${{ steps.meta.outputs.target_version }}"
+            --notes-file release-notes.md
+          )
+
+          if [[ "${{ steps.meta.outputs.github_prerelease }}" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh release create "${args[@]}"
+
+      - name: Publish to Modrinth
+        if: ${{ inputs.publish_modrinth }}
+        uses: cloudnode-pro/modrinth-publish@v2
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project: ${{ vars.MODRINTH_PROJECT_ID }}
+          version: ${{ steps.meta.outputs.target_version }}
+          name: HeadDB ${{ steps.meta.outputs.target_version }}
+          channel: ${{ steps.meta.outputs.modrinth_channel }}
+          changelog: |
+            HeadDB ${{ steps.meta.outputs.target_version }}
+
+            Promoted from ${{ steps.meta.outputs.source_tag }}.
+
+            Source release: ${{ steps.meta.outputs.source_url }}
+          loaders: |-
+            paper
+            folia
+          game-versions: |-
+            1.21.x
+            26.1.x
+            26.2.x
+          files: ${{ steps.asset.outputs.jar }}
+
+      - name: Publish to Hangar
+        if: ${{ inputs.publish_hangar }}
+        uses: benwoo1110/hangar-upload-action@v1
+        with:
+          api_token: ${{ secrets.HANGAR_API_TOKEN }}
+          slug: ${{ vars.HANGAR_PROJECT_SLUG }}
+          version: ${{ steps.meta.outputs.target_version }}
+          channel: ${{ steps.meta.outputs.hangar_channel }}
+          description: |
+            HeadDB ${{ steps.meta.outputs.target_version }}
+
+            Promoted from ${{ steps.meta.outputs.source_tag }}.
+
+            Source release: ${{ steps.meta.outputs.source_url }}
+          files: |-
+            [
+              {
+                "path": "${{ steps.asset.outputs.jar }}",
+                "platforms": ["PAPER"]
+              }
+            ]
+          platform_dependencies: |-
+            {
+              "PAPER": ["1.21.x", "26.1.x", "26.2.x"]
+            }

@@ -1,13 +1,13 @@
 name: "HeadDB"
 description: "Head database plugin."
+authors: ["SilentDevelopment", "TheSilentPro"]
+website: https://github.com/SilentDevelopment/HeadDB
 
 main: io.github.silentdevelopment.headdb.paper.HeadDBPlugin
 version: '${headdb.build.version}'
 api-version: '1.21'
 folia-supported: true
-
-authors: ["SilentDevelopment", "TheSilentPro"]
-website: https://github.com/SilentDevelopment/HeadDB
+loader: io.github.silentdevelopment.headdb.paper.runtime.HeadDBPluginLoader
 
 dependencies:
   server:
