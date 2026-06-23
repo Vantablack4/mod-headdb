@@ -1,0 +1,355 @@
+name: "HeadDB"
+description: "Head database plugin."
+
+main: io.github.silentdevelopment.headdb.paper.HeadDBPlugin
+version: '${headdb.build.version}'
+api-version: '1.21'
+folia-supported: true
+
+authors: ["SilentDevelopment", "TheSilentPro"]
+website: https://github.com/SilentDevelopment/HeadDB
+
+dependencies:
+  server:
+    Vault:
+      load: BEFORE
+      required: false
+      join-classpath: true
+
+default-perm: op
+
+permissions:
+  # Top-level bundles
+
+  headdb.admin:
+    description: Grants every HeadDB permission.
+    children:
+      headdb.basic: true
+      headdb.open: true
+      headdb.browse: true
+      headdb.search: true
+      headdb.head.take: true
+      headdb.give: true
+      headdb.give.others: true
+      headdb.player-heads: true
+      headdb.player-heads.others: true
+      headdb.more-heads: true
+      headdb.more-heads.give: true
+      headdb.more-heads.give.others: true
+      headdb.more-heads.admin: true
+      headdb.favorites: true
+      headdb.more-categories: true
+      headdb.more-categories.admin: true
+      headdb.settings: true
+      headdb.admin-mode: true
+      headdb.head-edit: true
+      headdb.gui-admin: true
+      headdb.database: true
+      headdb.category.*: true
+      headdb.command.help: true
+
+  headdb.basic:
+    description: Allows basic player HeadDB usage.
+    children:
+      headdb.command.help: true
+      headdb.settings: true
+      headdb.open: true
+      headdb.browse: true
+      headdb.search: true
+      headdb.favorites: true
+      headdb.head.take: true
+
+  headdb.open:
+    description: Allows opening the main HeadDB menu.
+    children:
+      headdb.command.open: true
+      headdb.gui.main: true
+
+  headdb.browse:
+    description: Allows browsing HeadDB categories and GUI head lists.
+    children:
+      headdb.gui.browse: true
+      headdb.gui.category.view: true
+      headdb.gui.category.open: true
+      headdb.category.*: true
+
+  headdb.search:
+    description: Allows using HeadDB search command, GUI search, and filters.
+    children:
+      headdb.command.search: true
+      headdb.gui.search: true
+      headdb.gui.filter: true
+      headdb.gui.browse: true
+      headdb.gui.category.open: true
+      headdb.category.*: true
+
+  headdb.head.take:
+    description: Allows taking heads from HeadDB GUIs.
+    children:
+      headdb.gui.head.take: true
+
+  headdb.give:
+    description: Allows giving remote HeadDB heads with commands.
+    children:
+      headdb.command.give: true
+
+  headdb.give.others:
+    description: Allows giving remote HeadDB heads to other players with commands.
+    children:
+      headdb.give: true
+      headdb.command.give.others: true
+
+  headdb.player-heads:
+    description: Allows using player-head commands and the Player Heads GUI.
+    children:
+      headdb.command.player: true
+      headdb.gui.player-heads: true
+      headdb.gui.browse: true
+
+  headdb.player-heads.others:
+    description: Allows giving player heads to other players.
+    children:
+      headdb.player-heads: true
+      headdb.command.player.others: true
+
+  headdb.more-heads:
+    description: Allows listing, inspecting, and browsing More Heads.
+    children:
+      headdb.command.custom.list: true
+      headdb.command.custom.info: true
+      headdb.gui.custom-heads: true
+      headdb.gui.browse: true
+
+  headdb.more-heads.give:
+    description: Allows giving More Heads with commands.
+    children:
+      headdb.command.custom.give: true
+
+  headdb.more-heads.give.others:
+    description: Allows giving More Heads to other players with commands.
+    children:
+      headdb.more-heads.give: true
+      headdb.command.custom.give.others: true
+
+  headdb.more-heads.admin:
+    description: Allows creating, deleting, and renaming More Heads.
+    children:
+      headdb.command.custom.create: true
+      headdb.command.custom.delete: true
+      headdb.command.custom.rename: true
+
+  headdb.favorites:
+    description: Allows opening Favorites and toggling favorite heads.
+    children:
+      headdb.gui.favorites: true
+      headdb.gui.favorites.toggle: true
+      headdb.gui.browse: true
+
+  headdb.more-categories:
+    description: Allows opening More Categories.
+    children:
+      headdb.gui.more-categories: true
+      headdb.gui.browse: true
+      headdb.gui.category.open: true
+
+  headdb.more-categories.admin:
+    description: Allows creating, editing, and deleting More Categories in Admin Mode.
+    children:
+      headdb.more-categories: true
+      headdb.gui.more-categories.admin: true
+      headdb.gui.admin-mode: true
+
+  headdb.settings:
+    description: Allows opening settings and changing language.
+    children:
+      headdb.gui.settings: true
+      headdb.gui.settings.language: true
+
+  headdb.admin-mode:
+    description: Allows toggling HeadDB Admin Mode.
+    children:
+      headdb.gui.admin-mode: true
+      headdb.gui.settings: true
+
+  headdb.head-edit:
+    description: Allows editing local head overrides in Admin Mode.
+    children:
+      headdb.command.edit: true
+      headdb.command.edit.name: true
+      headdb.command.edit.lore: true
+      headdb.command.edit.tags: true
+      headdb.command.edit.category: true
+      headdb.command.edit.visibility: true
+      headdb.command.edit.reset: true
+      headdb.gui.edit: true
+      headdb.gui.admin-mode: true
+
+  headdb.gui-admin:
+    description: Allows HeadDB GUI administration in Admin Mode.
+    children:
+      headdb.gui.button-config: true
+      headdb.gui.hidden-heads: true
+      headdb.gui.admin-mode: true
+
+  headdb.database:
+    description: Allows database/runtime administration commands.
+    children:
+      headdb.command.status: true
+      headdb.command.debug: true
+      headdb.command.verify: true
+      headdb.command.refresh: true
+      headdb.command.reload: true
+      headdb.command.itemcache: true
+
+  # Command actions
+
+  headdb.command.help:
+    description: Allows using /hdb help.
+
+  headdb.command.status:
+    description: Allows using /hdb status.
+
+  headdb.command.debug:
+    description: Allows using /hdb debug.
+
+  headdb.command.verify:
+    description: Allows using /hdb verify.
+
+  headdb.command.refresh:
+    description: Allows using /hdb refresh.
+
+  headdb.command.reload:
+    description: Allows using /hdb reload.
+
+  headdb.command.search:
+    description: Allows executing HeadDB searches with /hdb search and GUI search input.
+
+  headdb.command.info:
+    description: Allows using /hdb info.
+
+  headdb.command.give:
+    description: Allows giving remote HeadDB heads with /hdb give.
+
+  headdb.command.give.others:
+    description: Allows giving remote HeadDB heads to other players with /hdb give.
+
+  headdb.command.open:
+    description: Allows using /hdb open and the root /hdb menu-open behavior.
+
+  headdb.command.open.others:
+    description: Allows using /hdb open for other players.
+
+  headdb.command.itemcache:
+    description: Allows using /hdb itemcache.
+
+  headdb.command.player:
+    description: Allows using /hdb player for yourself.
+
+  headdb.command.player.others:
+    description: Allows using /hdb player for other players.
+
+  headdb.command.custom.list:
+    description: Allows using /hdb custom list.
+
+  headdb.command.custom.info:
+    description: Allows using /hdb custom info.
+
+  headdb.command.custom.create:
+    description: Allows using /hdb custom create and /hdb custom createheld.
+
+  headdb.command.custom.delete:
+    description: Allows using /hdb custom delete.
+
+  headdb.command.custom.rename:
+    description: Allows using /hdb custom rename.
+
+  headdb.command.custom.give:
+    description: Allows using /hdb custom give for yourself.
+
+  headdb.command.custom.give.others:
+    description: Allows using /hdb custom give for other players.
+
+  headdb.command.edit:
+    description: Allows using /hdb edit.
+
+  headdb.command.edit.name:
+    description: Allows editing local head names.
+
+  headdb.command.edit.lore:
+    description: Allows editing local head lore.
+
+  headdb.command.edit.tags:
+    description: Allows editing local head tags and collections.
+
+  headdb.command.edit.category:
+    description: Allows editing local head categories.
+
+  headdb.command.edit.visibility:
+    description: Allows hiding and showing heads locally.
+
+  headdb.command.edit.reset:
+    description: Allows resetting local head overrides.
+
+  # GUI actions
+
+  headdb.gui.main:
+    description: Allows opening the main HeadDB GUI.
+
+  headdb.gui.browse:
+    description: Allows browsing head-result GUIs.
+
+  headdb.gui.search:
+    description: Allows viewing and using the GUI search button.
+
+  headdb.gui.filter:
+    description: Allows opening and using GUI sort/filter controls.
+
+  headdb.gui.head.take:
+    description: Allows taking heads from HeadDB GUIs.
+
+  headdb.gui.category.view:
+    description: Allows viewing category buttons in the main GUI.
+
+  headdb.gui.category.open:
+    description: Allows opening category result GUIs.
+
+  headdb.gui.player-heads:
+    description: Allows opening the Player Heads GUI.
+
+  headdb.gui.custom-heads:
+    description: Allows opening the More Heads GUI.
+
+  headdb.gui.favorites:
+    description: Allows opening the Favorites GUI.
+
+  headdb.gui.favorites.toggle:
+    description: Allows adding and removing favorite heads.
+
+  headdb.gui.more-categories:
+    description: Allows opening the More Categories GUI.
+
+  headdb.gui.more-categories.admin:
+    description: Allows administering More Categories entries in Admin Mode.
+
+  headdb.gui.hidden-heads:
+    description: Allows opening the Hidden Heads GUI in Admin Mode.
+
+  headdb.gui.edit:
+    description: Allows opening the HeadDB head edit GUI in Admin Mode.
+
+  headdb.gui.button-config:
+    description: Allows editing HeadDB GUI button configuration in Admin Mode.
+
+  headdb.gui.settings:
+    description: Allows opening the HeadDB settings GUI.
+
+  headdb.gui.settings.language:
+    description: Allows changing the HeadDB language setting.
+
+  headdb.gui.admin-mode:
+    description: Allows toggling verbose HeadDB Admin Mode.
+
+  # Category visibility
+
+  headdb.category.*:
+    description: Allows viewing all HeadDB categories.

@@ -1,0 +1,101 @@
+package io.github.silentdevelopment.headdb.paper.command.subcommand.search;
+
+import io.github.silentdevelopment.headdb.model.HeadId;
+import io.github.silentdevelopment.headdb.paper.HeadDBPlugin;
+import io.github.silentdevelopment.headdb.paper.command.CommandRequirements;
+import io.github.silentdevelopment.headdb.paper.command.Suggestions;
+import io.github.silentdevelopment.headdb.paper.command.format.SearchFormatter;
+import io.github.silentdevelopment.headdb.paper.command.search.SearchOptions;
+import io.github.silentdevelopment.headdb.paper.command.search.SearchParser;
+import io.github.silentdevelopment.headdb.paper.search.SearchRequest;
+import io.github.silentdevelopment.headdb.paper.permission.Permissions;
+import io.github.silentdevelopment.headdb.query.HeadQuery;
+import io.github.silentdevelopment.headdb.query.HeadQueryResult;
+import io.github.silentdevelopment.relay.argument.Argument;
+import io.github.silentdevelopment.relay.command.Command;
+import io.github.silentdevelopment.relay.paper.argument.PaperArgumentTypes;
+import io.github.silentdevelopment.relay.paper.command.AbstractPaperCommand;
+import io.github.silentdevelopment.relay.paper.command.PaperCommands;
+import io.github.silentdevelopment.relay.paper.command.context.PaperCommandContext;
+import net.kyori.adventure.text.Component;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
+
+public final class SearchHeadCommand extends AbstractPaperCommand {
+
+    private static final Argument<String> ID = Argument.required("id", PaperArgumentTypes.STRING);
+
+    private final HeadDBPlugin plugin;
+
+    public SearchHeadCommand(@NotNull HeadDBPlugin plugin) {
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+    }
+
+    @Override
+    protected void handle(@NotNull PaperCommandContext context) {
+        try {
+            HeadId id = SearchParser.headId(context.get(ID));
+            SearchRequest request = SearchOptions.headRequest(context, id);
+            execute(context, request);
+        } catch (IllegalArgumentException exception) {
+            context.reply(plugin.messages().invalidArgument(context.sender(), exception.getMessage()));
+        }
+    }
+
+    @Override
+    protected @NotNull Command buildCommand() {
+        return PaperCommands.literal("head")
+                .description("Searches one head by ID.")
+                .requirement(CommandRequirements.permission(Permissions.SEARCH))
+                .signature(ID)
+
+                .option(SearchOptions.SORT)
+                .option(SearchOptions.DIRECTION)
+                .option(SearchOptions.PAGE)
+                .option(SearchOptions.LIMIT)
+
+                .suggest(ID, Suggestions.headIds(plugin))
+                .suggest(SearchOptions.SORT_VALUE, Suggestions.sorts())
+                .suggest(SearchOptions.DIRECTION_VALUE, Suggestions.directions())
+                .suggest(SearchOptions.PAGE_VALUE, Suggestions.pages())
+                .suggest(SearchOptions.LIMIT_VALUE, Suggestions.limits())
+
+                .build();
+    }
+
+    private void execute(@NotNull PaperCommandContext context, @NotNull SearchRequest request) {
+        if (context.isPlayer()) {
+            context.reply(plugin.messages().searchGuiNotReady(context.sender()));
+            return;
+        }
+
+        HeadQueryResult result = search(request);
+
+        if (result.total() > 0 && request.page() > result.totalPages()) {
+            request = request.withPage(result.totalPages());
+            result = search(request);
+        }
+
+        for (Component line : SearchFormatter.format(context.sender(), request, result)) {
+            context.reply(line);
+        }
+    }
+
+    private @NotNull HeadQueryResult search(@NotNull SearchRequest request) {
+        HeadQuery.Builder builder = HeadQuery.builder()
+                .text(request.query())
+                .ids(request.ids())
+                .tags(request.tags())
+                .collections(request.collections())
+                .page(request.page(), request.limit())
+                .sort(request.sort())
+                .direction(request.direction());
+
+        if (request.category() != null) {
+            builder.category(request.category());
+        }
+
+        return plugin.headRegistry().search(builder.build());
+    }
+}

@@ -1,0 +1,566 @@
+version: 1
+filler:
+  enabled: true
+  material: BLACK_STAINED_GLASS_PANE
+  name: ' '
+  lore: []
+icons:
+  back:
+    type: HEAD
+    head-id: '9866'
+    material: ACACIA_DOOR
+    name: <gold>Back
+    lore:
+    - <gray>Return to the previous menu.
+  previous:
+    type: HEAD
+    head-id: '10191'
+    material: ARROW
+    name: <gold>Previous
+    lore:
+    - <gray>Go to the previous page.
+  next:
+    type: HEAD
+    head-id: '10189'
+    material: ARROW
+    name: <gold>Next
+    lore:
+    - <gray>Go to the next page.
+  info:
+    type: HEAD
+    head-id: '38870'
+    material: BOOK
+    name: <gold>Information
+    lore:
+    - <gray>View information.
+  settings:
+    type: HEAD
+    head-id: '26110'
+    material: REPEATER
+    name: <gold>Settings
+    lore:
+    - <gray>Open HeadDB settings.
+  languages:
+    type: HEAD
+    head-id: '112081'
+    material: WRITABLE_BOOK
+    name: <gold>Languages
+    lore:
+    - <gray>Open language selection.
+  status:
+    type: HEAD
+    head-id: '23224'
+    material: COMPASS
+    name: <gold>Status
+    lore:
+    - <gray>View database status.
+  debug:
+    type: ITEM
+    head-id: ''
+    material: REDSTONE_TORCH
+    name: <gold>Debug
+    lore:
+    - <gray>Show diagnostic runtime details.
+  verify:
+    type: ITEM
+    head-id: ''
+    material: ENDER_EYE
+    name: <gold>Verify
+    lore:
+    - <gray>Check remote database integrity without replacing the active database.
+  refresh:
+    type: HEAD
+    head-id: '37791'
+    material: EMERALD
+    name: <gold>Refresh
+    lore:
+    - <gray>Download and activate the latest remote database.
+  reload:
+    type: HEAD
+    head-id: '32824'
+    material: REDSTONE
+    name: <gold>Reload
+    lore:
+    - <gray>Reload plugin configuration and runtime services.
+  close:
+    type: HEAD
+    head-id: '56785'
+    material: BARRIER
+    name: <red>Close
+    lore:
+    - <gray>Close this menu.
+  browse-all:
+    type: HEAD
+    head-id: '220'
+    material: PLAYER_HEAD
+    name: <gold>Browse All Heads
+    lore:
+    - <gray>Open all heads.
+  search:
+    type: ITEM
+    head-id: ''
+    material: SPYGLASS
+    name: <gold>Search
+    lore:
+    - <gray>Search HeadDB using chat input.
+  player-heads:
+    type: ITEM
+    head-id: ''
+    material: PLAYER_HEAD
+    name: <gold>Player Heads
+    lore:
+    - <gray>Browse known server players.
+  custom-heads:
+    type: ITEM
+    head-id: ''
+    material: CHEST
+    name: <gold>More Heads
+    lore:
+    - <gray>Browse local custom heads.
+  edit:
+    type: ITEM
+    head-id: ''
+    material: ANVIL
+    name: <gold>Edit
+    lore:
+    - <gray>Edit local metadata.
+  reset-language:
+    type: HEAD
+    head-id: '32823'
+    material: BARRIER
+    name: <red>Reset Language
+    lore:
+    - <gray>Reset to the configured default locale.
+  no-permission:
+    type: HEAD
+    head-id: '101167'
+    material: BARRIER
+    name: <red>No Permission
+    lore:
+    - <gray>You do not have permission to use this.
+  empty:
+    type: ITEM
+    head-id: ''
+    material: BARRIER
+    name: <red>No Results
+    lore:
+    - <gray>Nothing was found.
+  sort-cycle:
+    type: ITEM
+    head-id: ''
+    material: COMPARATOR
+    name: <gold>Sort
+    lore:
+    - <gray>Cycle result sorting.
+  sort-direction:
+    type: ITEM
+    head-id: ''
+    material: REPEATER
+    name: <gold>Sort Direction
+    lore:
+    - <gray>Toggle ascending or descending order.
+  filter-category:
+    type: ITEM
+    head-id: ''
+    material: CHEST
+    name: <gold>Category Filters
+    lore:
+    - <gray>Filter results by categories.
+  filter-tags:
+    type: ITEM
+    head-id: ''
+    material: NAME_TAG
+    name: <gold>Tag Filters
+    lore:
+    - <gray>Filter results by tags.
+  filter-collections:
+    type: ITEM
+    head-id: ''
+    material: BOOKSHELF
+    name: <gold>Collection Filters
+    lore:
+    - <gray>Filter results by collections.
+  filter-selected:
+    type: ITEM
+    head-id: ''
+    material: LIME_DYE
+    name: <green>Selected Filter
+    lore:
+    - <gray>Click to remove this filter.
+  filter-unselected:
+    type: ITEM
+    head-id: ''
+    material: GRAY_DYE
+    name: <gold>Available Filter
+    lore:
+    - <gray>Click to select this filter.
+  clear-filters:
+    type: ITEM
+    head-id: ''
+    material: BARRIER
+    name: <red>Clear Filters
+    lore:
+    - <gray>Remove selected filters.
+  sort-filter:
+    type: ITEM
+    head-id: ''
+    material: HOPPER
+    name: <gold>Sort / Filter
+    lore:
+    - <gray>Change result sorting and filters.
+  sort-option:
+    type: ITEM
+    head-id: ''
+    material: COMPARATOR
+    name: <gold>Sort Option
+    lore:
+    - <gray>Change result sorting.
+  hidden-heads:
+    type: ITEM
+    head-id: ''
+    material: GRAY_DYE
+    name: <gold>Hidden Heads
+    lore:
+    - <gray>Browse heads hidden by local overrides.
+  favorites:
+    type: ITEM
+    head-id: ''
+    material: NETHER_STAR
+    name: <gold>Favorites
+    lore:
+    - <gray>Browse your favorite heads.
+    - <yellow>Right-click heads to favorite or unfavorite them.
+  more-categories:
+    type: ITEM
+    head-id: ''
+    material: MAP
+    name: <gold>More Categories
+    lore:
+    - <gray>Open configured custom category shortcuts.
+  more-category:
+    type: ITEM
+    head-id: ''
+    material: CHEST
+    name: <gold>Custom Category
+    lore:
+    - <gray>Browse this configured category.
+  category:
+    type: ITEM
+    head-id: ''
+    material: PLAYER_HEAD
+    name: <gold>Category
+    lore:
+    - <gray>Default category button icon settings.
+  category-add:
+    type: ITEM
+    head-id: ''
+    material: LIME_DYE
+    name: <green>Add Category
+    lore:
+    - <gray>Add a configured custom category.
+  category-remove:
+    type: ITEM
+    head-id: ''
+    material: RED_DYE
+    name: <red>Remove Category
+    lore:
+    - <gray>Remove a configured custom category.
+  category-name:
+    type: ITEM
+    head-id: ''
+    material: NAME_TAG
+    name: <gold>Name
+    lore:
+    - <gray>Set the display name.
+  category-id:
+    type: ITEM
+    head-id: ''
+    material: PAPER
+    name: <gold>Category ID
+    lore:
+    - <gray>Set the HeadDB category target.
+  category-material:
+    type: ITEM
+    head-id: ''
+    material: CHEST
+    name: <gold>Icon Material
+    lore:
+    - <gray>Select the category icon material.
+  category-head-icon:
+    type: ITEM
+    head-id: ''
+    material: PLAYER_HEAD
+    name: <gold>Icon Head
+    lore:
+    - <gray>Use a HeadDB head as this category icon.
+  category-view-heads:
+    type: ITEM
+    head-id: ''
+    material: BOOKSHELF
+    name: <gold>View Heads
+    lore:
+    - <gray>View, add, or remove category heads.
+  category-save:
+    type: ITEM
+    head-id: ''
+    material: LIME_CONCRETE
+    name: <green>Save
+    lore: []
+  material-select:
+    type: ITEM
+    head-id: ''
+    material: STONE
+    name: <gold>Material
+    lore:
+    - <gray>Select this material.
+  material-type-chat:
+    type: ITEM
+    head-id: ''
+    material: OAK_SIGN
+    name: <gold>Type Material Name
+    lore:
+    - <gray>Enter a material name in chat.
+  button-lore-line:
+    type: ITEM
+    head-id: ''
+    material: PAPER
+    name: <gold>Lore Line
+    lore:
+    - <gray>Click to edit this line.
+    - <red>Drop to remove this line.
+  confirm-yes:
+    type: ITEM
+    head-id: ''
+    material: LIME_CONCRETE
+    name: <green>Confirm
+    lore:
+    - <gray>Confirm this action.
+  confirm-no:
+    type: ITEM
+    head-id: ''
+    material: RED_CONCRETE
+    name: <red>Cancel
+    lore:
+    - <gray>Cancel this action.
+  show-all:
+    type: ITEM
+    head-id: ''
+    material: LIME_DYE
+    name: <green>Show All
+    lore:
+    - <gray>Remove all local hidden-head flags.
+  admin-mode-on:
+    type: ITEM
+    head-id: ''
+    material: LIME_DYE
+    name: <gold>Mode
+    lore:
+    - <green>ADMIN MODE
+    - <gray>USER MODE
+    - <yellow>Click to switch mode.
+  admin-mode-off:
+    type: ITEM
+    head-id: ''
+    material: GRAY_DYE
+    name: <gold>Mode
+    lore:
+    - <gray>ADMIN MODE
+    - <green>USER MODE
+    - <yellow>Click to switch mode.
+  edit-name:
+    type: ITEM
+    head-id: ''
+    material: NAME_TAG
+    name: <gold>Name
+    lore:
+    - <gray>Edit the local display name.
+  edit-lore:
+    type: ITEM
+    head-id: ''
+    material: WRITABLE_BOOK
+    name: <gold>Lore
+    lore:
+    - <gray>Edit local lore lines.
+  edit-category:
+    type: ITEM
+    head-id: ''
+    material: CHEST
+    name: <gold>Category
+    lore:
+    - <gray>Select a local category.
+  edit-tags:
+    type: ITEM
+    head-id: ''
+    material: NAME_TAG
+    name: <gold>Tags
+    lore:
+    - <gray>Select local tags.
+  edit-collections:
+    type: ITEM
+    head-id: ''
+    material: BOOKSHELF
+    name: <gold>Collections
+    lore:
+    - <gray>Select local collections.
+  edit-visibility-visible:
+    type: ITEM
+    head-id: ''
+    material: LIME_DYE
+    name: <gold>Visibility
+    lore:
+    - <green>SHOW
+    - <gray>HIDE
+    - <yellow>Click to toggle visibility.
+  edit-visibility-hidden:
+    type: ITEM
+    head-id: ''
+    material: GRAY_DYE
+    name: <gold>Visibility
+    lore:
+    - <gray>SHOW
+    - <green>HIDE
+    - <yellow>Click to toggle visibility.
+  edit-delete:
+    type: ITEM
+    head-id: ''
+    material: BARRIER
+    name: <red>Delete
+    lore:
+    - <gray>Delete this custom head.
+  edit-reset:
+    type: ITEM
+    head-id: ''
+    material: REDSTONE
+    name: <red>Reset Override
+    lore:
+    - <gray>Remove local metadata overrides.
+  lore-add:
+    type: ITEM
+    head-id: ''
+    material: LIME_DYE
+    name: <green>Add Lore Line
+    lore:
+    - <gray>Add a new local lore line.
+  lore-clear:
+    type: ITEM
+    head-id: ''
+    material: BARRIER
+    name: <red>Clear Lore
+    lore:
+    - <gray>Remove all local lore lines.
+  lore-line:
+    type: ITEM
+    head-id: ''
+    material: PAPER
+    name: <gold>Lore Line
+    lore:
+    - <gray>Click to edit this line.
+    - <red>Drop to remove this line.
+  lore-reset:
+    type: ITEM
+    head-id: ''
+    material: REDSTONE
+    name: <red>Reset Lore
+    lore:
+    - <gray>Reset local lore to the default lore.
+  gui-edit-name:
+    type: ITEM
+    head-id: ''
+    material: NAME_TAG
+    name: <gold>Name
+    lore:
+    - <gray>Edit this GUI button name.
+  gui-edit-material:
+    type: ITEM
+    head-id: ''
+    material: IRON_INGOT
+    name: <gold>Material
+    lore:
+    - <gray>Edit this GUI button material.
+  gui-edit-type:
+    type: ITEM
+    head-id: ''
+    material: LEVER
+    name: <gold>Type
+    lore:
+    - <gray>Toggle ITEM or HEAD rendering.
+  gui-edit-head-id:
+    type: ITEM
+    head-id: ''
+    material: PLAYER_HEAD
+    name: <gold>Head ID
+    lore:
+    - <gray>Edit this GUI button head id.
+  gui-edit-lore:
+    type: ITEM
+    head-id: ''
+    material: PAPER
+    name: <gold>Lore
+    lore:
+    - <gray>Edit this GUI button lore.
+  gui-edit-reset:
+    type: ITEM
+    head-id: ''
+    material: REDSTONE
+    name: <red>Reset
+    lore:
+    - <gray>Reset this button to its default name, lore, and material.
+texts:
+  category-count: "%name% (%count%)"
+slots:
+  main.browse-heads: 31
+  main.player-heads: 37
+  main.custom-heads: 28
+  main.favorites: 40
+  main.hidden-heads: 51
+  main.search: 43
+  main.more-categories: 34
+  main.settings: 53
+  main.info: 49
+  settings.admin-mode: 13
+  settings.language: 20
+  settings.debug: 24
+  settings.verify: 33
+  settings.reload: 40
+  settings.refresh: 42
+  settings.back: 45
+  edit.preview: 13
+  edit.name: 21
+  edit.lore: 23
+  edit.category: 29
+  edit.tags: 31
+  edit.collections: 33
+  edit.visibility: 39
+  edit.reset: 41
+  edit.delete: 41
+  edit.back: 45
+  edit.lore.preview: 4
+  edit.lore.add: 48
+  edit.lore.clear: 50
+  edit.lore.reset: 53
+  edit.lore.back: 45
+  hidden.show-all: 53
+
+  more.category-create.name: 20
+  more.category-create.material: 23
+  more.category-create.head-icon: 24
+  more.category-create.view-heads: 31
+  more.category-create.save: 40
+  more.category-create.back: 45
+  material.back: 45
+  material.previous: 48
+  material.type-chat: 49
+  material.next: 53
+  gui-button.back: 18
+  gui-button.preview: 4
+  gui-button.name: 10
+  gui-button.material: 11
+  gui-button.type: 12
+  gui-button.head-id: 13
+  gui-button.lore: 14
+  gui-button.reset: 16
+  gui-button-lore.preview: 4
+  gui-button-lore.back: 45
+  gui-button-lore.add: 48
+  gui-button-lore.clear: 50
+  gui-button-lore.reset: 53

@@ -1,194 +1,197 @@
 # HeadDB
 
-> **Thousands of custom Minecraft heads—instantly accessible in‑game!**
+HeadDB is a Paper/Folia plugin for browsing, searching, and giving Minecraft head items from a public remote database.
 
----
+## Requirements
 
-## 📦 Table of Contents
-1. [Features](#features)  
-2. [Download & Installation](#download--installation)  
-3. [Reporting Issues](#reporting-issues)  
-4. [Using the API](#using-the-api)  
-   - [Adding the Dependency](#adding-the-dependency)  
-   - [Obtaining the API](#obtaining-the-api)  
-   - [Waiting for Database Ready](#waiting-for-database-ready)  
-   - [Examples](#examples)  
-5. [API Reference](#api-reference)  
-6. [Contributing](#contributing)  
-7. [License](#license)
+- Java 25 for the Paper plugin.
+- Paper/Folia.
+- Network access.
+- Vault and an economy provider if economy support is enabled.
 
----
+The API and core modules target Java 21. The Paper plugin targets Java 25.
 
-## 🔍 Features
-- **Massive Head Library**  
-  Browse thousands of player heads, from popular themes to custom community submissions.  
-- **Lightweight API**  
-  Decoupled `headdb-api` module keeps your plugin lean—no extra dependencies at runtime.  
-- **Async Loading**  
-  The database loads on a background thread.  
-- **Flexible Querying**  
-  Search by name, ID,category, or tags.  
+## Features
 
----
+- Public remote head database.
+- Verified remote downloads using SHA-256.
+- Local cache with startup cache loading.
+- Search and category browsing.
+- Player heads.
+- Local custom heads.
+- Favorites.
+- Custom categories.
+- Admin editing tools.
+- Configurable GUI layout and messages.
+- Optional Vault economy integration.
+- Paper/Folia support.
+- API/core modules for external integrations.
 
-## 🚀 Download & Installation
+## Modules
 
-Choose your preferred source:
+```text
+headdb-api
+  Public API: models, identifiers, queries, and database interfaces.
 
-- **Releases (GitHub)**  
-  https://github.com/TheSilentPro/HeadDB/releases  
-- **Modrinth**  
-  https://modrinth.com/plugin/hdb  
-- **Hangar (PaperMC)**  
-  https://hangar.papermc.io/Silent/HeadDB  
-- **Spigot** *(Not recommended)*  
-  https://www.spigotmc.org/resources/84967/  
+headdb-core
+  Database implementation: remote loading, verification, parsing, cache, and refresh.
 
----
+headdb-platforms/headdb-paper
+  Paper/Folia plugin: commands, GUI, local storage, messages, economy, and item generation.
+```
 
-## 🐞 Reporting Issues
+## Plugin usage
 
-Found a bug or have a feature request? Open an issue:
+Wiki: Coming Soon
 
-[HeadDB Issue Tracker](https://github.com/TheSilentPro/HeadDB/issues)
+Build or download the Paper plugin jar and place it in your server `plugins` folder.
 
----
+Start the server once to generate config files.
 
-## 🤝 Using the API
+```text
+plugins/HeadDB/
+  config.yml
+  gui.yml
+  economy.yml
+  messages/
+    en-US.yml
+```
 
-### 1. Adding the Dependency
+Basic player usage:
 
-HeadDB publishes its API module via JitPack.
+```text
+/hdb
+```
 
-#### Maven
+Useful admin commands:
+
+```text
+/hdb status
+/hdb verify
+/hdb refresh
+/hdb reload
+/hdb debug
+```
+
+The main GUI provides browsing, searching, favorites, player heads, custom heads, custom categories, and settings.
+
+## API usage
+
+Add the API module as a dependency if you want to integrate with HeadDB from another plugin.
+
 ```xml
-<repositories>
-  <repository>
-    <id>jitpack.io</id>
-    <url>https://jitpack.io</url>
-  </repository>
-</repositories>
-
-<dependencies>
-  <dependency>
-    <groupId>com.github.TheSilentPro.HeadDB</groupId>
-    <artifactId>HeadDB</artifactId>
-    <version>VERSION</version>
-  </dependency>
-</dependencies>
+<dependency>
+    <groupId>io.github.silentdevelopment.headdb</groupId>
+    <artifactId>headdb-api</artifactId>
+    <version>7.0.0-rc.1</version>
+    <scope>provided</scope>
+</dependency>
 ```
 
-#### Gradle
-```gradle
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
-
-dependencies {
-    implementation "com.github.TheSilentPro.HeadDB:HeadDB:VERSION"
-}
-```
-
----
-
-### 2. Obtaining the API
-
-HeadDB’s main `HeadAPI` is registered with Bukkit’s Services Manager:
+Example: search the database.
 
 ```java
-RegisteredServiceProvider<HeadAPI> rsp = Bukkit.getServicesManager().getRegistration(HeadAPI.class);
-if (rsp == null) {
-    // HeadDB is not installed or failed to register
-    return;
+import io.github.silentdevelopment.headdb.database.HeadDatabase;
+import io.github.silentdevelopment.headdb.model.Head;
+import io.github.silentdevelopment.headdb.query.HeadQuery;
+import io.github.silentdevelopment.headdb.query.HeadQueryResult;
+
+public final class HeadSearchExample {
+
+    private final HeadDatabase database;
+
+    public HeadSearchExample(HeadDatabase database) {
+        this.database = database;
+    }
+
+    public void search() {
+        HeadQuery query = HeadQuery.builder()
+                .query("stone")
+                .page(1)
+                .pageSize(28)
+                .build();
+
+        HeadQueryResult result = database.search(query);
+
+        for (Head head : result.heads()) {
+            System.out.println(head.id().display() + " - " + head.name());
+        }
+    }
 }
-HeadAPI api = rsp.getProvider();
 ```
 
----
-
-### 3. Waiting for Database Ready
-
-The head database loads asynchronously. Use these methods to wait on it:
+Example: find a head by ID.
 
 ```java
-// Check if ready without blocking
-boolean ready = api.isReady();
+import io.github.silentdevelopment.headdb.database.HeadDatabase;
+import io.github.silentdevelopment.headdb.model.Head;
+import io.github.silentdevelopment.headdb.model.HeadId;
 
-// Block until initial load completes
-api.awaitReady();
+import java.util.Optional;
 
-// Asynchronously wait; returns CompletableFuture<List<Head>>
-api.onReady().thenAccept(headList -> {
-    System.out.println("Loaded " + headList.size() + " heads!");
-});
+public final class HeadLookupExample {
+
+    private final HeadDatabase database;
+
+    public HeadLookupExample(HeadDatabase database) {
+        this.database = database;
+    }
+
+    public Optional<Head> find(String input) {
+        HeadId id = HeadId.parse(input);
+        return database.find(id);
+    }
+}
 ```
 
----
+Remote heads can usually be referenced by their visible ID. Custom and player heads use typed IDs.
 
-### 4. Examples
-
-```java
-api.onReady().thenAccept(heads -> {
-    System.out.println("Total heads: " + heads.size());
-    api.findByCategory("Alphabet")
-       .thenAccept(catHeads -> System.out.println("Alphabet category: " + catHeads.size()));
-});
-
-api.onReady().thenRun(() -> {
-    api.findById(1).thenAccept(optHead -> {
-        optHead.ifPresentOrElse(
-            head -> System.out.println("Head #1: " + head.getName()),
-            ()   -> System.out.println("No head with ID 1 found")
-        );
-    });
-
-    api.findByTexture("cbc826aaafb8dbf67881e68944414f13985064a3f8f044d8edfb4443e76ba")
-       .thenAccept(optHead -> {
-           optHead.ifPresentOrElse(
-               head -> System.out.println("Texture match: " + head.getName()),
-               ()   -> System.out.println("No head for that texture")
-           );
-       });
-});
+```text
+123
+custom:melon
+player:f16df3ef-06b8-443e-9166-fba6689585b4
 ```
 
----
+## Build
 
-## 📖 API Reference
+Verify API/core with Java 21:
 
-All available methods live in the [HeadAPI class on GitHub](https://github.com/TheSilentPro/HeadDB/blob/master/headdb-api/src/main/java/com/github/thesilentpro/headdb/api/HeadAPI.java).
+```powershell
+mvn -B -ntp -pl headdb-api,headdb-core -am verify
+```
 
-| Method                                    | Description                                                      |
-|-------------------------------------------|------------------------------------------------------------------|
-| `void awaitReady()`                       | Blocks until the database finishes initial load.                 |
-| `boolean isReady()`                       | Returns true if the database is fully loaded (success/failure).  |
-| `CompletableFuture<List<Head>> onReady()` | Async callback once initial load completes.                      |
-| `searchByName(String name, boolean lenient)` | Fuzzy or exact name searches.                                 |
-| `findById(int id)`                        | Lookup by internal head ID.                                      |
-| `findByTexture(String texture)`           | Lookup by skin texture hash.                                     |
-| `findByCategory(String category)`         | Get all heads in a given category.                               |
-| `findByTags(String... tags)`              | Get heads matching any of the supplied tags.                     |
-| `getHeads()`                              | Retrieve the full list of loaded heads (async).                  |
-| `computeLocalHeads()`                     | Generate `ItemStack`s for all currently online players.          |
-| `computeLocalHead(UUID uniqueId)`         | Generate an `ItemStack` for a specific player UUID.              |
-| `List<String> findKnownCategories()`      | List all category names.                                         |
-| `ExecutorService getExecutor()`           | Access the internal executor for advanced workflows.             |
+Package the Paper plugin with Java 25:
 
----
+```powershell
+mvn -B -ntp -pl headdb-platforms/headdb-paper -am clean package
+```
 
-## 🤗 Contributing
+The plugin jar is produced at:
 
-1. Fork the repository  
-2. Create a feature branch (`git checkout -b feature/YourFeature`)  
-3. Commit your changes (`git commit -m "Add awesome feature"`)  
-4. Push to your branch (`git push origin feature/YourFeature`)  
-5. Open a Pull Request  
+```text
+headdb-platforms/headdb-paper/target/HeadDB.jar
+```
 
-Please follow the existing code style.
+## License
 
----
+HeadDB is a multi-license project.
 
-## 📜 License
+```text
+headdb-api
+  Apache-2.0
 
-Distributed under the [GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html).
+headdb-core
+  Apache-2.0
+
+headdb-platforms/headdb-paper
+  GPL-3.0-or-later
+```
+
+Full license texts are stored in:
+
+```text
+LICENSES/Apache-2.0.txt
+LICENSES/GPL-3.0-or-later.txt
+```
+
+Unless a file states otherwise, files are licensed under the license of the module they belong to.
