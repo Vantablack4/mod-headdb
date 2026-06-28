@@ -4,6 +4,7 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
@@ -29,7 +30,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permission;
@@ -90,20 +90,22 @@ public final class HeadDbCommands {
                     .executes(context -> giveRemoteHead(context, context.getSource().getPlayerOrException(), 1))
                     .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
                         .executes(context -> giveRemoteHead(context, context.getSource().getPlayerOrException(), getInteger(context, AMOUNT_ARGUMENT))))
-                    .then(Commands.argument(TARGET_ARGUMENT, EntityArgument.player())
-                        .executes(context -> giveRemoteHead(context, EntityArgument.getPlayer(context, TARGET_ARGUMENT), 1))
+                    .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
+                        .suggests(this::suggestTargets)
+                        .executes(context -> giveRemoteHeadToTarget(context, 1))
                         .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
-                            .executes(context -> giveRemoteHead(context, EntityArgument.getPlayer(context, TARGET_ARGUMENT), getInteger(context, AMOUNT_ARGUMENT)))))))
+                            .executes(context -> giveRemoteHeadToTarget(context, getInteger(context, AMOUNT_ARGUMENT)))))))
             .then(Commands.literal("player")
                 .requires(this::isAdmin)
                 .then(Commands.argument(PLAYER_ARGUMENT, StringArgumentType.word())
                     .executes(context -> givePlayerHead(context, context.getSource().getPlayerOrException(), 1))
                     .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
                         .executes(context -> givePlayerHead(context, context.getSource().getPlayerOrException(), getInteger(context, AMOUNT_ARGUMENT))))
-                    .then(Commands.argument(TARGET_ARGUMENT, EntityArgument.player())
-                        .executes(context -> givePlayerHead(context, EntityArgument.getPlayer(context, TARGET_ARGUMENT), 1))
+                    .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
+                        .suggests(this::suggestTargets)
+                        .executes(context -> givePlayerHeadToTarget(context, 1))
                         .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
-                            .executes(context -> givePlayerHead(context, EntityArgument.getPlayer(context, TARGET_ARGUMENT), getInteger(context, AMOUNT_ARGUMENT)))))))
+                            .executes(context -> givePlayerHeadToTarget(context, getInteger(context, AMOUNT_ARGUMENT)))))))
             .then(Commands.literal("refresh")
                 .requires(this::isAdmin)
                 .executes(this::refresh))
@@ -234,12 +236,28 @@ public final class HeadDbCommands {
         return 1;
     }
 
+    private int giveRemoteHeadToTarget(CommandContext<CommandSourceStack> context, int amount) {
+        Optional<ServerPlayer> target = findTarget(context);
+        if (target.isEmpty()) {
+            return 0;
+        }
+        return giveRemoteHead(context, target.get(), amount);
+    }
+
     private int givePlayerHead(CommandContext<CommandSourceStack> context, ServerPlayer target, int amount) {
         String player = getString(context, PLAYER_ARGUMENT);
         ItemStack stack = itemFactory.playerHead(player, amount);
         giveStack(target, stack);
         context.getSource().sendSystemMessage(success("Gave " + amount + "x player head to " + displayName(target) + "."));
         return 1;
+    }
+
+    private int givePlayerHeadToTarget(CommandContext<CommandSourceStack> context, int amount) {
+        Optional<ServerPlayer> target = findTarget(context);
+        if (target.isEmpty()) {
+            return 0;
+        }
+        return givePlayerHead(context, target.get(), amount);
     }
 
     private static String displayName(ServerPlayer player) {
@@ -262,6 +280,56 @@ public final class HeadDbCommands {
         } catch (IllegalArgumentException exception) {
             context.getSource().sendSystemMessage(error(exception.getMessage()));
             return Optional.empty();
+        }
+    }
+
+    private Optional<ServerPlayer> findTarget(CommandContext<CommandSourceStack> context) {
+        String targetText = getString(context, TARGET_ARGUMENT).trim();
+        if (targetText.isEmpty()) {
+            context.getSource().sendSystemMessage(error("Target character name cannot be empty."));
+            return Optional.empty();
+        }
+
+        ServerPlayer namedPlayer = context.getSource().getServer().getPlayerList().getPlayerByName(targetText);
+        if (namedPlayer != null) {
+            return Optional.of(namedPlayer);
+        }
+
+        List<ServerPlayer> matches = context.getSource().getServer().getPlayerList().getPlayers().stream()
+            .filter(player -> matchesTarget(player, targetText))
+            .toList();
+        if (matches.isEmpty()) {
+            context.getSource().sendSystemMessage(error("No online player or character named \"" + targetText + "\"."));
+            return Optional.empty();
+        }
+        if (matches.size() > 1) {
+            context.getSource().sendSystemMessage(error("Multiple online players match \"" + targetText + "\"."));
+            return Optional.empty();
+        }
+        return Optional.of(matches.get(0));
+    }
+
+    private java.util.concurrent.CompletableFuture<Suggestions> suggestTargets(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        List<String> names = new ArrayList<>();
+        for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
+            addUnique(names, player.getGameProfile().name());
+            addUnique(names, displayName(player));
+        }
+        return SharedSuggestionProvider.suggest(names, builder);
+    }
+
+    private static boolean matchesTarget(ServerPlayer player, String targetText) {
+        return player.getGameProfile().name().equalsIgnoreCase(targetText)
+            || player.getName().getString().equalsIgnoreCase(targetText)
+            || displayName(player).equalsIgnoreCase(targetText);
+    }
+
+    private static void addUnique(List<String> values, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        if (!values.contains(value)) {
+            values.add(value);
         }
     }
 
