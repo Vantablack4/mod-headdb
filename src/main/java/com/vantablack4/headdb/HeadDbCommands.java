@@ -138,8 +138,8 @@ public final class HeadDbCommands {
         source.sendSystemMessage(line("Open", "/hdb"));
         source.sendSystemMessage(line("Search", "/hdb search <query>"));
         source.sendSystemMessage(line("Info", "/hdb info <id>"));
-        source.sendSystemMessage(line("Give", "/hdb give <id> [amount] | /hdb give <id> <player> [amount]"));
-        source.sendSystemMessage(line("Player", "/hdb player <name|uuid> [amount] | /hdb player <name|uuid> <player> [amount]"));
+        source.sendSystemMessage(line("Give", "/hdb give <id> [amount] | /hdb give <id> \"Character Name\" [amount]"));
+        source.sendSystemMessage(line("Player", "/hdb player <name|uuid> [amount] | /hdb player <name|uuid> \"Character Name\" [amount]"));
         source.sendSystemMessage(line("Admin", "/hdb status | refresh | verify"));
         return 1;
     }

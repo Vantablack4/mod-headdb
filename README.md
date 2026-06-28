@@ -21,9 +21,9 @@ This fork keeps the upstream Apache-2.0 API/core database engine and replaces th
 /hdb search <query>
 /hdb info <remote-id>
 /hdb give <remote-id> [amount]
-/hdb give <remote-id> <player> [amount]
+/hdb give <remote-id> "Character Name" [amount]
 /hdb player <name|uuid> [amount]
-/hdb player <name|uuid> <player> [amount]
+/hdb player <name|uuid> "Character Name" [amount]
 /hdb refresh
 /hdb verify
 ```
