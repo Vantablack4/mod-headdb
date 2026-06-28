@@ -13,7 +13,6 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.github.silentdevelopment.headdb.core.database.DatabaseSnapshot;
@@ -48,11 +47,13 @@ public final class HeadDbCommands {
     private final HeadDbConfig config;
     private final HeadDbDatabaseService databaseService;
     private final FabricHeadItemFactory itemFactory;
+    private final HeadDbGuiService guiService;
 
     public HeadDbCommands(HeadDbConfig config, HeadDbDatabaseService databaseService, FabricHeadItemFactory itemFactory) {
         this.config = config;
         this.databaseService = databaseService;
         this.itemFactory = itemFactory;
+        this.guiService = new HeadDbGuiService(config, databaseService, itemFactory);
     }
 
     public void register() {
@@ -66,14 +67,18 @@ public final class HeadDbCommands {
 
     private LiteralArgumentBuilder<CommandSourceStack> root(String name) {
         return Commands.literal(name)
-            .executes(this::sendHelp)
+            .executes(this::openDefaultGui)
             .then(Commands.literal("help")
                 .executes(this::sendHelp))
             .then(Commands.literal("status")
                 .executes(this::sendStatus))
             .then(Commands.literal("search")
                 .then(Commands.argument(QUERY_ARGUMENT, StringArgumentType.greedyString())
-                    .executes(this::sendSearch)))
+                    .executes(this::openSearchGui)))
+            .then(Commands.literal("gui")
+                .executes(this::openDefaultGui)
+                .then(Commands.argument(QUERY_ARGUMENT, StringArgumentType.greedyString())
+                    .executes(this::openSearchGui)))
             .then(Commands.literal("info")
                 .then(Commands.argument(ID_ARGUMENT, StringArgumentType.word())
                     .suggests(this::suggestHeadIds)
@@ -111,13 +116,30 @@ public final class HeadDbCommands {
         return source.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.byId(config.adminPermissionLevel())));
     }
 
+    private int openDefaultGui(CommandContext<CommandSourceStack> context) {
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            return sendHelp(context);
+        }
+        return guiService.openDefault(player);
+    }
+
+    private int openSearchGui(CommandContext<CommandSourceStack> context) {
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            return sendSearch(context);
+        }
+        return guiService.openSearch(player, getString(context, QUERY_ARGUMENT));
+    }
+
     private int sendHelp(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         source.sendSystemMessage(header("HeadDB"));
+        source.sendSystemMessage(line("Open", "/hdb"));
         source.sendSystemMessage(line("Search", "/hdb search <query>"));
         source.sendSystemMessage(line("Info", "/hdb info <id>"));
-        source.sendSystemMessage(line("Give", "/hdb give <id> [target] [amount]"));
-        source.sendSystemMessage(line("Player", "/hdb player <name|uuid> [target] [amount]"));
+        source.sendSystemMessage(line("Give", "/hdb give <id> [amount] | /hdb give <id> <player> [amount]"));
+        source.sendSystemMessage(line("Player", "/hdb player <name|uuid> [amount] | /hdb player <name|uuid> <player> [amount]"));
         source.sendSystemMessage(line("Admin", "/hdb status | refresh | verify"));
         return 1;
     }
@@ -205,7 +227,7 @@ public final class HeadDbCommands {
 
         ItemStack stack = itemFactory.remoteHead(head.get(), amount);
         giveStack(target, stack);
-        context.getSource().sendSystemMessage(success("Gave " + amount + "x " + head.get().name() + " to " + target.getName().getString() + "."));
+        context.getSource().sendSystemMessage(success("Gave " + amount + "x " + head.get().name() + " to " + displayName(target) + "."));
         if (context.getSource().getPlayer() != target) {
             target.sendSystemMessage(success("Received " + head.get().name() + "."));
         }
@@ -216,8 +238,12 @@ public final class HeadDbCommands {
         String player = getString(context, PLAYER_ARGUMENT);
         ItemStack stack = itemFactory.playerHead(player, amount);
         giveStack(target, stack);
-        context.getSource().sendSystemMessage(success("Gave " + amount + "x player head to " + target.getName().getString() + "."));
+        context.getSource().sendSystemMessage(success("Gave " + amount + "x player head to " + displayName(target) + "."));
         return 1;
+    }
+
+    private static String displayName(ServerPlayer player) {
+        return player.getDisplayName().getString();
     }
 
     private void giveStack(ServerPlayer target, ItemStack stack) {
