@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "mod_headdb",
+  "version": "${version}",
+  "name": "Vantablack HeadDB",
+  "description": "Server-side Fabric port of HeadDB for searchable textured player-head commands.",
+  "authors": ["Vantablack4", "SilentDevelopment"],
+  "contact": {
+    "homepage": "https://github.com/Vantablack4/mod-headdb",
+    "sources": "https://github.com/SilentDevelopment/HeadDB"
+  },
+  "license": "SEE LICENSE",
+  "environment": "server",
+  "entrypoints": {
+    "main": ["com.vantablack4.headdb.VantablackHeadDbMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.2",
+    "minecraft": "26.1.2",
+    "fabric-api": "*"
+  }
+}

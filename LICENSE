@@ -1,14 +1,20 @@
-HeadDB is a multi-license project.
+Vantablack HeadDB is a multi-license project forked from
+SilentDevelopment/HeadDB.
 
-The license for each module is:
+The license for each source area is:
 
 - headdb-api: Apache License 2.0
 - headdb-core: Apache License 2.0
-- headdb-platforms/headdb-paper: GNU General Public License v3.0 or later
+- src/main/java/com/vantablack4/headdb: proprietary Vantablack4 internal code
+- src/main/resources and build/CI files: proprietary Vantablack4 internal code
 
-The full license texts are available in:
+The full Apache 2.0 text is available in:
 
 - LICENSES/Apache-2.0.txt
-- LICENSES/GPL-3.0-or-later.txt
 
-Unless a file states otherwise, files are licensed under the license of the module they belong to.
+The GPL-3.0-or-later text is retained under LICENSES only for historical
+upstream reference. The Fabric platform layer in this branch does not copy the
+upstream Paper platform module.
+
+Unless a file states otherwise, files are licensed under the license of the
+source area they belong to.

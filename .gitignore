@@ -1,10 +1,9 @@
-target/
-.idea/
-scripts/
-
-dependency-reduced-pom.xml
+.gradle/
 build/
-
+logs/
+*.log
+.DS_Store
+.idea/
+*.iml
 .classpath
 .project
-*.iml
