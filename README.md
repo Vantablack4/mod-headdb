@@ -28,7 +28,7 @@ This fork keeps the upstream Apache-2.0 API/core database engine and replaces th
 /hdb verify
 ```
 
-`/headdb` is registered as an alias. Players open the paginated GUI with `/hdb`; console callers receive text help/search output. Clicking a head in the GUI gives one copy to the viewer when they have the configured admin permission level. Quoted command targets resolve against online player usernames and display/character names. Admin commands use the same configured permission level, defaulting to operator level `2`.
+`/headdb` is registered as an alias. Players open the paginated GUI with `/hdb`; console callers receive text help/search output. Clicking a head in the GUI gives one copy to the viewer when they have the configured admin permission level. Quoted command targets resolve against online character names only. Admin commands use the same configured permission level, defaulting to operator level `2`.
 
 ## Configuration
 

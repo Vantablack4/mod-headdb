@@ -290,20 +290,15 @@ public final class HeadDbCommands {
             return Optional.empty();
         }
 
-        ServerPlayer namedPlayer = context.getSource().getServer().getPlayerList().getPlayerByName(targetText);
-        if (namedPlayer != null) {
-            return Optional.of(namedPlayer);
-        }
-
         List<ServerPlayer> matches = context.getSource().getServer().getPlayerList().getPlayers().stream()
             .filter(player -> matchesTarget(player, targetText))
             .toList();
         if (matches.isEmpty()) {
-            context.getSource().sendSystemMessage(error("No online player or character named \"" + targetText + "\"."));
+            context.getSource().sendSystemMessage(error("No online character named \"" + targetText + "\"."));
             return Optional.empty();
         }
         if (matches.size() > 1) {
-            context.getSource().sendSystemMessage(error("Multiple online players match \"" + targetText + "\"."));
+            context.getSource().sendSystemMessage(error("Multiple online characters match \"" + targetText + "\"."));
             return Optional.empty();
         }
         return Optional.of(matches.get(0));
@@ -312,16 +307,28 @@ public final class HeadDbCommands {
     private java.util.concurrent.CompletableFuture<Suggestions> suggestTargets(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         List<String> names = new ArrayList<>();
         for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
-            addUnique(names, player.getGameProfile().name());
-            addUnique(names, displayName(player));
+            characterName(player)
+                .map(StringArgumentType::escapeIfRequired)
+                .ifPresent(name -> addUnique(names, name));
         }
         return SharedSuggestionProvider.suggest(names, builder);
     }
 
     private static boolean matchesTarget(ServerPlayer player, String targetText) {
-        return player.getGameProfile().name().equalsIgnoreCase(targetText)
-            || player.getName().getString().equalsIgnoreCase(targetText)
-            || displayName(player).equalsIgnoreCase(targetText);
+        return characterName(player)
+            .map(name -> name.equalsIgnoreCase(targetText))
+            .orElse(false);
+    }
+
+    private static Optional<String> characterName(ServerPlayer player) {
+        if (player == null) {
+            return Optional.empty();
+        }
+        String name = displayName(player).trim();
+        if (name.isBlank() || name.equalsIgnoreCase(player.getGameProfile().name())) {
+            return Optional.empty();
+        }
+        return Optional.of(name);
     }
 
     private static void addUnique(List<String> values, String value) {
