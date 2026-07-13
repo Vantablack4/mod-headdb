@@ -19,11 +19,11 @@ This fork keeps the upstream Apache-2.0 API/core database engine and replaces th
 /hdb gui [query]
 /hdb search <query>
 /hdb info <remote-id>
-/agivehead <remote-id> <target|self> <amount> <reason>
-/agiveplayerhead <name|uuid> <target|self> <amount> <reason>
-/arefreshheaddb <reason>
-/averifyheaddb <reason>
-/aheaddbstatus
+/agivehead <remote-id> <target|self> <amount> [reason]
+/agiveplayerhead <name|uuid> <target|self> <amount> [reason]
+/arefreshheaddb [reason]
+/averifyheaddb [reason]
+/aheaddbstatus [reason]
 ```
 
 `/headdb` is registered as an alias. Players open the paginated GUI with `/hdb`;
@@ -32,7 +32,8 @@ against online character names only. Each admin root has its own exact
 `vantablack.command.*` platform permission and uses the shared durable audit
 executor. The old `/hdb give`, `/hdb player`, `/hdb refresh`, `/hdb verify`, and
 `/hdb status` paths remain audited transition aliases through release `0.3.0`.
-They emit a migration warning and have no OP or command-level fallback.
+Audit reasons on the canonical admin commands are optional. The legacy paths
+emit a migration warning and have no OP or command-level fallback.
 
 ## Configuration
 
