@@ -3,12 +3,15 @@ package com.vantablack4.headdb;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -21,6 +24,8 @@ import com.vantablack4.permissions.api.AdminCommandDefinition;
 import com.vantablack4.permissions.api.AdminCommandInvocation;
 import com.vantablack4.permissions.api.AdminCommandResult;
 import com.vantablack4.permissions.api.VantablackPermissions;
+import com.vantablack4.characters.ActiveCharacterSession;
+import com.vantablack4.characters.VantablackCharacterServices;
 import io.github.silentdevelopment.headdb.database.DatabaseStatus;
 import io.github.silentdevelopment.headdb.database.DatabaseStats;
 import io.github.silentdevelopment.headdb.model.Head;
@@ -35,6 +40,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -295,6 +301,8 @@ public final class HeadDbCommands {
         }
 
         warnLegacy(context.getSource(), legacy, GIVE_REMOTE.literal());
+        PinnedTarget pinnedTarget = pinTarget(context.getSource(), target);
+        if (pinnedTarget == null) return 0;
         Head value = head.get();
         Map<String, Object> parameters = Map.of(
             "headId", value.id().display(),
@@ -305,14 +313,13 @@ public final class HeadDbCommands {
         return VantablackPermissions.adminCommands().execute(
             context.getSource(),
             GIVE_REMOTE,
-            invocation(target, parameters, reason),
-            () -> {
-                giveStack(target, itemFactory.remoteHead(value, amount));
-                if (context.getSource().getPlayer() != target) {
-                    target.sendSystemMessage(success("Received " + value.name() + "."));
-                }
-                return completed(GIVE_REMOTE, "headdb_remote_head_given", parameters);
-            }
+            invocation(pinnedTarget, parameters, reason),
+            () -> givePinned(
+                context.getSource().getServer(), pinnedTarget, () -> itemFactory.remoteHead(value, amount),
+                GIVE_REMOTE, "headdb_remote_head_given", parameters,
+                context.getSource().getPlayer() == null ? null : context.getSource().getPlayer().getUUID(),
+                "Received " + value.name() + "."
+            )
         );
     }
 
@@ -333,6 +340,8 @@ public final class HeadDbCommands {
     ) {
         String player = getString(context, PLAYER_ARGUMENT);
         warnLegacy(context.getSource(), legacy, GIVE_PLAYER.literal());
+        PinnedTarget pinnedTarget = pinTarget(context.getSource(), target);
+        if (pinnedTarget == null) return 0;
         Map<String, Object> parameters = Map.of(
             "playerHead", player,
             "amount", amount,
@@ -341,11 +350,11 @@ public final class HeadDbCommands {
         return VantablackPermissions.adminCommands().execute(
             context.getSource(),
             GIVE_PLAYER,
-            invocation(target, parameters, reason),
-            () -> {
-                giveStack(target, itemFactory.playerHead(player, amount));
-                return completed(GIVE_PLAYER, "headdb_player_head_given", parameters);
-            }
+            invocation(pinnedTarget, parameters, reason),
+            () -> givePinned(
+                context.getSource().getServer(), pinnedTarget, () -> itemFactory.playerHead(player, amount),
+                GIVE_PLAYER, "headdb_player_head_given", parameters, null, null
+            )
         );
     }
 
@@ -368,6 +377,29 @@ public final class HeadDbCommands {
             target.drop(remaining, false);
         }
         target.inventoryMenu.broadcastChanges();
+    }
+
+    private CompletableFuture<AdminCommandResult> givePinned(
+        MinecraftServer server,
+        PinnedTarget expected,
+        Supplier<ItemStack> stack,
+        AdminCommandDefinition definition,
+        String resultCode,
+        Map<String, Object> parameters,
+        UUID actorPlayerUuid,
+        String recipientMessage
+    ) {
+        ServerPlayer current = resolvePinned(server, expected);
+        if (current == null) {
+            return CompletableFuture.failedFuture(new IllegalStateException(
+                "Target character session changed while the admin command was being authorized."
+            ));
+        }
+        giveStack(current, stack.get());
+        if (recipientMessage != null && !current.getUUID().equals(actorPlayerUuid)) {
+            current.sendSystemMessage(success(recipientMessage));
+        }
+        return completed(definition, resultCode, parameters);
     }
 
     private Optional<Head> findHead(CommandContext<CommandSourceStack> context) {
@@ -522,6 +554,8 @@ public final class HeadDbCommands {
     }
 
     private void giveGuiHead(ServerPlayer player, Head head) {
+        PinnedTarget pinnedTarget = pinTarget(player.createCommandSourceStack(), player);
+        if (pinnedTarget == null) return;
         Map<String, Object> parameters = Map.of(
             "headId", head.id().display(),
             "headName", head.name(),
@@ -531,11 +565,11 @@ public final class HeadDbCommands {
         VantablackPermissions.adminCommands().execute(
             player.createCommandSourceStack(),
             GIVE_REMOTE,
-            invocation(player, parameters, "HeadDB GUI grant"),
-            () -> {
-                giveStack(player, itemFactory.remoteHead(head, 1));
-                return completed(GIVE_REMOTE, "headdb_remote_head_given", parameters);
-            }
+            invocation(pinnedTarget, parameters, "HeadDB GUI grant"),
+            () -> givePinned(
+                player.level().getServer(), pinnedTarget, () -> itemFactory.remoteHead(head, 1),
+                GIVE_REMOTE, "headdb_remote_head_given", parameters, player.getUUID(), null
+            )
         );
     }
 
@@ -552,14 +586,62 @@ public final class HeadDbCommands {
         ));
     }
 
-    private static AdminCommandInvocation invocation(ServerPlayer target, Map<String, Object> parameters, String reason) {
+    private static AdminCommandInvocation invocation(PinnedTarget target, Map<String, Object> parameters, String reason) {
         return AdminCommandInvocation.target(
             "character",
-            target.getUUID().toString(),
-            displayName(target),
+            target.characterId().toString(),
+            target.targetName(),
             parameters,
             reason
         );
+    }
+
+    private static PinnedTarget pinTarget(CommandSourceStack source, ServerPlayer target) {
+        ActiveCharacterSession session = VantablackCharacterServices.activeSession(target.getUUID()).orElse(null);
+        if (session == null) {
+            source.sendFailure(Component.literal("Target has no active Vantablack character session."));
+            return null;
+        }
+        return PinnedTarget.capture(target, session);
+    }
+
+    private static ServerPlayer resolvePinned(MinecraftServer server, PinnedTarget expected) {
+        if (server == null) return null;
+        ServerPlayer current = server.getPlayerList().getPlayer(expected.playerUuid());
+        ActiveCharacterSession session = current == null
+            ? null
+            : VantablackCharacterServices.activeSession(expected.playerUuid()).orElse(null);
+        return current != null && expected.matches(session) ? current : null;
+    }
+
+    record PinnedTarget(
+        UUID playerUuid,
+        UUID accountId,
+        UUID characterId,
+        int sessionId,
+        Instant selectedAt,
+        String targetName
+    ) {
+        static PinnedTarget capture(ServerPlayer target, ActiveCharacterSession session) {
+            return new PinnedTarget(
+                target.getUUID(), session.accountId(), session.characterId(), session.sessionId(),
+                session.selectedAt(), displayName(target)
+            );
+        }
+
+        boolean matches(ActiveCharacterSession session) {
+            return session != null && matches(
+                session.playerUuid(), session.accountId(), session.characterId(), session.sessionId(), session.selectedAt()
+            );
+        }
+
+        boolean matches(UUID player, UUID account, UUID character, int currentSessionId, Instant currentSelectedAt) {
+            return playerUuid.equals(player)
+                && accountId.equals(account)
+                && characterId.equals(character)
+                && sessionId == currentSessionId
+                && selectedAt.equals(currentSelectedAt);
+        }
     }
 
     private static String legacyReason(String root, String subcommand) {
