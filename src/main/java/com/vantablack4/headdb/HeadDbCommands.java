@@ -47,22 +47,22 @@ import net.minecraft.world.item.ItemStack;
 public final class HeadDbCommands {
     private static final AdminCommandDefinition GIVE_REMOTE = definition(
         "headdb.remote.give", "agivehead", "vantablack.command.agivehead",
-        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.OPTIONAL,
         "character", "headdb.remote.give", "admcmd.headdb.remote.give"
     );
     private static final AdminCommandDefinition GIVE_PLAYER = definition(
         "headdb.player.give", "agiveplayerhead", "vantablack.command.agiveplayerhead",
-        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.OPTIONAL,
         "character", "headdb.player.give", "admcmd.headdb.player.give"
     );
     private static final AdminCommandDefinition REFRESH = definition(
         "headdb.refresh", "arefreshheaddb", "vantablack.command.arefreshheaddb",
-        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.OPTIONAL,
         "service", "headdb.refresh", "admcmd.headdb.refresh"
     );
     private static final AdminCommandDefinition VERIFY = definition(
         "headdb.verify", "averifyheaddb", "vantablack.command.averifyheaddb",
-        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.OPTIONAL,
         "service", "headdb.verify", "admcmd.headdb.verify"
     );
     private static final AdminCommandDefinition STATUS = definition(
@@ -94,19 +94,23 @@ public final class HeadDbCommands {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> register(dispatcher));
     }
 
-    private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+    void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(root("hdb"));
         dispatcher.register(root("headdb"));
         dispatcher.register(canonicalRemoteGive());
         dispatcher.register(canonicalPlayerGive());
         dispatcher.register(Commands.literal(REFRESH.literal())
+            .executes(context -> refresh(context, "", false))
             .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
                 .executes(context -> refresh(context, getString(context, REASON_ARGUMENT), false))));
         dispatcher.register(Commands.literal(VERIFY.literal())
+            .executes(context -> verify(context, "", false))
             .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
                 .executes(context -> verify(context, getString(context, REASON_ARGUMENT), false))));
         dispatcher.register(Commands.literal(STATUS.literal())
-            .executes(context -> auditedStatus(context, "", false)));
+            .executes(context -> auditedStatus(context, "", false))
+            .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
+                .executes(context -> auditedStatus(context, getString(context, REASON_ARGUMENT), false))));
     }
 
     private LiteralArgumentBuilder<CommandSourceStack> canonicalRemoteGive() {
@@ -116,6 +120,12 @@ public final class HeadDbCommands {
                 .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
                     .suggests(this::suggestTargetsIncludingSelf)
                     .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
+                        .executes(context -> giveRemoteHeadToTarget(
+                            context,
+                            getInteger(context, AMOUNT_ARGUMENT),
+                            "",
+                            false
+                        ))
                         .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
                             .executes(context -> giveRemoteHeadToTarget(
                                 context,
@@ -131,6 +141,12 @@ public final class HeadDbCommands {
                 .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
                     .suggests(this::suggestTargetsIncludingSelf)
                     .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
+                        .executes(context -> givePlayerHeadToTarget(
+                            context,
+                            getInteger(context, AMOUNT_ARGUMENT),
+                            "",
+                            false
+                        ))
                         .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
                             .executes(context -> givePlayerHeadToTarget(
                                 context,
@@ -207,9 +223,9 @@ public final class HeadDbCommands {
         source.sendSystemMessage(line("Open", "/hdb"));
         source.sendSystemMessage(line("Search", "/hdb search <query>"));
         source.sendSystemMessage(line("Info", "/hdb info <id>"));
-        source.sendSystemMessage(line("Give", "/agivehead <id> <target|self> <amount> <reason>"));
-        source.sendSystemMessage(line("Player", "/agiveplayerhead <name|uuid> <target|self> <amount> <reason>"));
-        source.sendSystemMessage(line("Admin", "/aheaddbstatus | /arefreshheaddb <reason> | /averifyheaddb <reason>"));
+        source.sendSystemMessage(line("Give", "/agivehead <id> <target|self> <amount> [reason]"));
+        source.sendSystemMessage(line("Player", "/agiveplayerhead <name|uuid> <target|self> <amount> [reason]"));
+        source.sendSystemMessage(line("Admin", "/aheaddbstatus [reason] | /arefreshheaddb [reason] | /averifyheaddb [reason]"));
         return 1;
     }
 

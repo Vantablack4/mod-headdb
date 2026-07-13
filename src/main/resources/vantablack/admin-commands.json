@@ -7,7 +7,7 @@
       "literal": "agivehead",
       "permission": "vantablack.command.agivehead",
       "risk": "medium",
-      "reason": "required",
+      "reason": "optional",
       "targetType": "character",
       "audit": {
         "eventType": "headdb.remote.give",
@@ -30,7 +30,7 @@
       "literal": "agiveplayerhead",
       "permission": "vantablack.command.agiveplayerhead",
       "risk": "medium",
-      "reason": "required",
+      "reason": "optional",
       "targetType": "character",
       "audit": {
         "eventType": "headdb.player.give",
@@ -53,7 +53,7 @@
       "literal": "arefreshheaddb",
       "permission": "vantablack.command.arefreshheaddb",
       "risk": "medium",
-      "reason": "required",
+      "reason": "optional",
       "targetType": "service",
       "audit": {
         "eventType": "headdb.refresh",
@@ -76,7 +76,7 @@
       "literal": "averifyheaddb",
       "permission": "vantablack.command.averifyheaddb",
       "risk": "medium",
-      "reason": "required",
+      "reason": "optional",
       "targetType": "service",
       "audit": {
         "eventType": "headdb.verify",
