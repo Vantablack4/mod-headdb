@@ -39,8 +39,12 @@ final class AdminCommandCatalogTests {
             assertThat(command.get("permission").getAsString()).startsWith("vantablack.command.a");
             assertThat(command.getAsJsonObject("audit").get("recipientPermission").getAsString())
                 .isEqualTo("vantablack.audit.admin.receive");
+            assertThat(command.getAsJsonArray("legacyAliases")).hasSize(2);
             assertThat(command.getAsJsonArray("legacyAliases").asList()).allSatisfy(aliasElement ->
                 assertThat(aliasElement.getAsJsonObject().get("removeAfter").getAsString()).isEqualTo("0.3.0"));
+            assertThat(command.getAsJsonArray("legacyAliases").asList().stream()
+                .map(alias -> alias.getAsJsonObject().get("literal").getAsString().split(" ")[0]))
+                .containsExactlyInAnyOrder("hdb", "headdb");
         });
     }
 }

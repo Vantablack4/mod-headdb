@@ -18,6 +18,10 @@
         {
           "literal": "hdb give",
           "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb give",
+          "removeAfter": "0.3.0"
         }
       ]
     },
@@ -36,6 +40,10 @@
       "legacyAliases": [
         {
           "literal": "hdb player",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb player",
           "removeAfter": "0.3.0"
         }
       ]
@@ -56,6 +64,10 @@
         {
           "literal": "hdb refresh",
           "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb refresh",
+          "removeAfter": "0.3.0"
         }
       ]
     },
@@ -75,6 +87,10 @@
         {
           "literal": "hdb verify",
           "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb verify",
+          "removeAfter": "0.3.0"
         }
       ]
     },
@@ -93,6 +109,10 @@
       "legacyAliases": [
         {
           "literal": "hdb status",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb status",
           "removeAfter": "0.3.0"
         }
       ]
