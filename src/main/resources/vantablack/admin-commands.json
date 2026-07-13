@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "owner": "mod-headdb",
+  "commands": [
+    {
+      "id": "headdb.remote.give",
+      "literal": "agivehead",
+      "permission": "vantablack.command.agivehead",
+      "risk": "medium",
+      "reason": "required",
+      "targetType": "character",
+      "audit": {
+        "eventType": "headdb.remote.give",
+        "successTemplate": "admcmd.headdb.remote.give",
+        "recipientPermission": "vantablack.audit.admin.receive"
+      },
+      "legacyAliases": [
+        {
+          "literal": "hdb give",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb give",
+          "removeAfter": "0.3.0"
+        }
+      ]
+    },
+    {
+      "id": "headdb.player.give",
+      "literal": "agiveplayerhead",
+      "permission": "vantablack.command.agiveplayerhead",
+      "risk": "medium",
+      "reason": "required",
+      "targetType": "character",
+      "audit": {
+        "eventType": "headdb.player.give",
+        "successTemplate": "admcmd.headdb.player.give",
+        "recipientPermission": "vantablack.audit.admin.receive"
+      },
+      "legacyAliases": [
+        {
+          "literal": "hdb player",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb player",
+          "removeAfter": "0.3.0"
+        }
+      ]
+    },
+    {
+      "id": "headdb.refresh",
+      "literal": "arefreshheaddb",
+      "permission": "vantablack.command.arefreshheaddb",
+      "risk": "medium",
+      "reason": "required",
+      "targetType": "service",
+      "audit": {
+        "eventType": "headdb.refresh",
+        "successTemplate": "admcmd.headdb.refresh",
+        "recipientPermission": "vantablack.audit.admin.receive"
+      },
+      "legacyAliases": [
+        {
+          "literal": "hdb refresh",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb refresh",
+          "removeAfter": "0.3.0"
+        }
+      ]
+    },
+    {
+      "id": "headdb.verify",
+      "literal": "averifyheaddb",
+      "permission": "vantablack.command.averifyheaddb",
+      "risk": "medium",
+      "reason": "required",
+      "targetType": "service",
+      "audit": {
+        "eventType": "headdb.verify",
+        "successTemplate": "admcmd.headdb.verify",
+        "recipientPermission": "vantablack.audit.admin.receive"
+      },
+      "legacyAliases": [
+        {
+          "literal": "hdb verify",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb verify",
+          "removeAfter": "0.3.0"
+        }
+      ]
+    },
+    {
+      "id": "headdb.status",
+      "literal": "aheaddbstatus",
+      "permission": "vantablack.command.aheaddbstatus",
+      "risk": "low",
+      "reason": "optional",
+      "targetType": "service",
+      "audit": {
+        "eventType": "headdb.status",
+        "successTemplate": "admcmd.headdb.status",
+        "recipientPermission": "vantablack.audit.admin.receive"
+      },
+      "legacyAliases": [
+        {
+          "literal": "hdb status",
+          "removeAfter": "0.3.0"
+        },
+        {
+          "literal": "headdb status",
+          "removeAfter": "0.3.0"
+        }
+      ]
+    }
+  ]
+}
