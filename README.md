@@ -17,18 +17,22 @@ This fork keeps the upstream Apache-2.0 API/core database engine and replaces th
 ```text
 /hdb
 /hdb gui [query]
-/hdb status
 /hdb search <query>
 /hdb info <remote-id>
-/hdb give <remote-id> [amount]
-/hdb give <remote-id> "Character Name" [amount]
-/hdb player <name|uuid> [amount]
-/hdb player <name|uuid> "Character Name" [amount]
-/hdb refresh
-/hdb verify
+/agivehead <remote-id> <target|self> <amount> <reason>
+/agiveplayerhead <name|uuid> <target|self> <amount> <reason>
+/arefreshheaddb <reason>
+/averifyheaddb <reason>
+/aheaddbstatus
 ```
 
-`/headdb` is registered as an alias. Players open the paginated GUI with `/hdb`; console callers receive text help/search output. Clicking a head in the GUI gives one copy to the viewer when they have the configured admin permission level. Quoted command targets resolve against online character names only. Admin commands use the same configured permission level, defaulting to operator level `2`.
+`/headdb` is registered as an alias. Players open the paginated GUI with `/hdb`;
+console callers receive text help/search output. Quoted command targets resolve
+against online character names only. Each admin root has its own exact
+`vantablack.command.*` platform permission and uses the shared durable audit
+executor. The old `/hdb give`, `/hdb player`, `/hdb refresh`, `/hdb verify`, and
+`/hdb status` paths remain audited transition aliases through release `0.3.0`.
+They emit a migration warning and have no OP or command-level fallback.
 
 ## Configuration
 
@@ -41,7 +45,6 @@ remote.cache-directory=cache
 startup.load-cache=true
 startup.refresh-remote=true
 commands.search-result-limit=10
-commands.admin-permission-level=2
 ```
 
 ## Build

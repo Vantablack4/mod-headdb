@@ -17,13 +17,11 @@ public record HeadDbConfig(
     Path cacheDirectory,
     boolean loadCachedOnStartup,
     boolean refreshOnStartup,
-    int searchResultLimit,
-    int adminPermissionLevel
+    int searchResultLimit
 ) {
     private static final String DEFAULT_MANIFEST_URI = "https://data.headsdb.com/manifest.json";
     private static final String DEFAULT_PREFERRED_MIRROR_ID = "primary";
     private static final int DEFAULT_SEARCH_RESULT_LIMIT = 10;
-    private static final int DEFAULT_ADMIN_PERMISSION_LEVEL = 2;
 
     public static HeadDbConfig load() {
         Path configDirectory = FabricLoader.getInstance().getConfigDir().resolve(VantablackHeadDbMod.MOD_ID);
@@ -49,7 +47,6 @@ public record HeadDbConfig(
         boolean loadCachedOnStartup = bool(properties, "startup.load-cache", true);
         boolean refreshOnStartup = bool(properties, "startup.refresh-remote", true);
         int searchResultLimit = boundedInt(properties, "commands.search-result-limit", DEFAULT_SEARCH_RESULT_LIMIT, 1, 50);
-        int adminPermissionLevel = boundedInt(properties, "commands.admin-permission-level", DEFAULT_ADMIN_PERMISSION_LEVEL, 0, 4);
 
         return new HeadDbConfig(
             manifestUri,
@@ -57,8 +54,7 @@ public record HeadDbConfig(
             cacheDirectory,
             loadCachedOnStartup,
             refreshOnStartup,
-            searchResultLimit,
-            adminPermissionLevel
+            searchResultLimit
         );
     }
 
@@ -70,7 +66,6 @@ public record HeadDbConfig(
         defaults.setProperty("startup.load-cache", "true");
         defaults.setProperty("startup.refresh-remote", "true");
         defaults.setProperty("commands.search-result-limit", Integer.toString(DEFAULT_SEARCH_RESULT_LIMIT));
-        defaults.setProperty("commands.admin-permission-level", Integer.toString(DEFAULT_ADMIN_PERMISSION_LEVEL));
         try (Writer writer = Files.newBufferedWriter(configFile)) {
             defaults.store(writer, "Vantablack HeadDB configuration");
         }

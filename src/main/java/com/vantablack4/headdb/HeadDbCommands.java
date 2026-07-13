@@ -6,8 +6,9 @@ import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletableFuture;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -16,7 +17,10 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import io.github.silentdevelopment.headdb.core.database.DatabaseSnapshot;
+import com.vantablack4.permissions.api.AdminCommandDefinition;
+import com.vantablack4.permissions.api.AdminCommandInvocation;
+import com.vantablack4.permissions.api.AdminCommandResult;
+import com.vantablack4.permissions.api.VantablackPermissions;
 import io.github.silentdevelopment.headdb.database.DatabaseStatus;
 import io.github.silentdevelopment.headdb.database.DatabaseStats;
 import io.github.silentdevelopment.headdb.model.Head;
@@ -32,16 +36,40 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permission;
-import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.world.item.ItemStack;
 
 public final class HeadDbCommands {
+    private static final AdminCommandDefinition GIVE_REMOTE = definition(
+        "headdb.remote.give", "agivehead", "vantablack.command.agivehead",
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        "character", "headdb.remote.give", "admcmd.headdb.remote.give"
+    );
+    private static final AdminCommandDefinition GIVE_PLAYER = definition(
+        "headdb.player.give", "agiveplayerhead", "vantablack.command.agiveplayerhead",
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        "character", "headdb.player.give", "admcmd.headdb.player.give"
+    );
+    private static final AdminCommandDefinition REFRESH = definition(
+        "headdb.refresh", "arefreshheaddb", "vantablack.command.arefreshheaddb",
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        "service", "headdb.refresh", "admcmd.headdb.refresh"
+    );
+    private static final AdminCommandDefinition VERIFY = definition(
+        "headdb.verify", "averifyheaddb", "vantablack.command.averifyheaddb",
+        AdminCommandDefinition.Risk.MEDIUM, AdminCommandDefinition.ReasonPolicy.REQUIRED,
+        "service", "headdb.verify", "admcmd.headdb.verify"
+    );
+    private static final AdminCommandDefinition STATUS = definition(
+        "headdb.status", "aheaddbstatus", "vantablack.command.aheaddbstatus",
+        AdminCommandDefinition.Risk.LOW, AdminCommandDefinition.ReasonPolicy.OPTIONAL,
+        "service", "headdb.status", "admcmd.headdb.status"
+    );
     private static final String ID_ARGUMENT = "id";
     private static final String QUERY_ARGUMENT = "query";
     private static final String PLAYER_ARGUMENT = "player";
     private static final String TARGET_ARGUMENT = "target";
     private static final String AMOUNT_ARGUMENT = "amount";
+    private static final String REASON_ARGUMENT = "reason";
     private static final int MAX_GIVE_AMOUNT = 64;
 
     private final HeadDbConfig config;
@@ -53,7 +81,7 @@ public final class HeadDbCommands {
         this.config = config;
         this.databaseService = databaseService;
         this.itemFactory = itemFactory;
-        this.guiService = new HeadDbGuiService(config, databaseService, itemFactory);
+        this.guiService = new HeadDbGuiService(databaseService, itemFactory, this::canReceiveHead, this::giveGuiHead);
     }
 
     public void register() {
@@ -63,6 +91,47 @@ public final class HeadDbCommands {
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(root("hdb"));
         dispatcher.register(root("headdb"));
+        dispatcher.register(canonicalRemoteGive());
+        dispatcher.register(canonicalPlayerGive());
+        dispatcher.register(Commands.literal(REFRESH.literal())
+            .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
+                .executes(context -> refresh(context, getString(context, REASON_ARGUMENT), false))));
+        dispatcher.register(Commands.literal(VERIFY.literal())
+            .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
+                .executes(context -> verify(context, getString(context, REASON_ARGUMENT), false))));
+        dispatcher.register(Commands.literal(STATUS.literal())
+            .executes(context -> auditedStatus(context, "", false)));
+    }
+
+    private LiteralArgumentBuilder<CommandSourceStack> canonicalRemoteGive() {
+        return Commands.literal(GIVE_REMOTE.literal())
+            .then(Commands.argument(ID_ARGUMENT, StringArgumentType.word())
+                .suggests(this::suggestHeadIds)
+                .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
+                    .suggests(this::suggestTargetsIncludingSelf)
+                    .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
+                        .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
+                            .executes(context -> giveRemoteHeadToTarget(
+                                context,
+                                getInteger(context, AMOUNT_ARGUMENT),
+                                getString(context, REASON_ARGUMENT),
+                                false
+                            ))))));
+    }
+
+    private LiteralArgumentBuilder<CommandSourceStack> canonicalPlayerGive() {
+        return Commands.literal(GIVE_PLAYER.literal())
+            .then(Commands.argument(PLAYER_ARGUMENT, StringArgumentType.word())
+                .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
+                    .suggests(this::suggestTargetsIncludingSelf)
+                    .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
+                        .then(Commands.argument(REASON_ARGUMENT, StringArgumentType.greedyString())
+                            .executes(context -> givePlayerHeadToTarget(
+                                context,
+                                getInteger(context, AMOUNT_ARGUMENT),
+                                getString(context, REASON_ARGUMENT),
+                                false
+                            ))))));
     }
 
     private LiteralArgumentBuilder<CommandSourceStack> root(String name) {
@@ -71,7 +140,7 @@ public final class HeadDbCommands {
             .then(Commands.literal("help")
                 .executes(this::sendHelp))
             .then(Commands.literal("status")
-                .executes(this::sendStatus))
+                .executes(context -> auditedStatus(context, legacyReason(name, "status"), true)))
             .then(Commands.literal("search")
                 .then(Commands.argument(QUERY_ARGUMENT, StringArgumentType.greedyString())
                     .executes(this::openSearchGui)))
@@ -84,38 +153,30 @@ public final class HeadDbCommands {
                     .suggests(this::suggestHeadIds)
                     .executes(this::sendInfo)))
             .then(Commands.literal("give")
-                .requires(this::isAdmin)
                 .then(Commands.argument(ID_ARGUMENT, StringArgumentType.word())
                     .suggests(this::suggestHeadIds)
-                    .executes(context -> giveRemoteHead(context, context.getSource().getPlayerOrException(), 1))
+                    .executes(context -> giveRemoteHead(context, context.getSource().getPlayerOrException(), 1, legacyReason(name, "give"), true))
                     .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
-                        .executes(context -> giveRemoteHead(context, context.getSource().getPlayerOrException(), getInteger(context, AMOUNT_ARGUMENT))))
+                        .executes(context -> giveRemoteHead(context, context.getSource().getPlayerOrException(), getInteger(context, AMOUNT_ARGUMENT), legacyReason(name, "give"), true)))
                     .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
                         .suggests(this::suggestTargets)
-                        .executes(context -> giveRemoteHeadToTarget(context, 1))
+                        .executes(context -> giveRemoteHeadToTarget(context, 1, legacyReason(name, "give"), true))
                         .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
-                            .executes(context -> giveRemoteHeadToTarget(context, getInteger(context, AMOUNT_ARGUMENT)))))))
+                            .executes(context -> giveRemoteHeadToTarget(context, getInteger(context, AMOUNT_ARGUMENT), legacyReason(name, "give"), true))))))
             .then(Commands.literal("player")
-                .requires(this::isAdmin)
                 .then(Commands.argument(PLAYER_ARGUMENT, StringArgumentType.word())
-                    .executes(context -> givePlayerHead(context, context.getSource().getPlayerOrException(), 1))
+                    .executes(context -> givePlayerHead(context, context.getSource().getPlayerOrException(), 1, legacyReason(name, "player"), true))
                     .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
-                        .executes(context -> givePlayerHead(context, context.getSource().getPlayerOrException(), getInteger(context, AMOUNT_ARGUMENT))))
+                        .executes(context -> givePlayerHead(context, context.getSource().getPlayerOrException(), getInteger(context, AMOUNT_ARGUMENT), legacyReason(name, "player"), true)))
                     .then(Commands.argument(TARGET_ARGUMENT, StringArgumentType.string())
                         .suggests(this::suggestTargets)
-                        .executes(context -> givePlayerHeadToTarget(context, 1))
+                        .executes(context -> givePlayerHeadToTarget(context, 1, legacyReason(name, "player"), true))
                         .then(Commands.argument(AMOUNT_ARGUMENT, IntegerArgumentType.integer(1, MAX_GIVE_AMOUNT))
-                            .executes(context -> givePlayerHeadToTarget(context, getInteger(context, AMOUNT_ARGUMENT)))))))
+                            .executes(context -> givePlayerHeadToTarget(context, getInteger(context, AMOUNT_ARGUMENT), legacyReason(name, "player"), true))))))
             .then(Commands.literal("refresh")
-                .requires(this::isAdmin)
-                .executes(this::refresh))
+                .executes(context -> refresh(context, legacyReason(name, "refresh"), true)))
             .then(Commands.literal("verify")
-                .requires(this::isAdmin)
-                .executes(this::verify));
-    }
-
-    private boolean isAdmin(CommandSourceStack source) {
-        return source.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.byId(config.adminPermissionLevel())));
+                .executes(context -> verify(context, legacyReason(name, "verify"), true)));
     }
 
     private int openDefaultGui(CommandContext<CommandSourceStack> context) {
@@ -140,9 +201,9 @@ public final class HeadDbCommands {
         source.sendSystemMessage(line("Open", "/hdb"));
         source.sendSystemMessage(line("Search", "/hdb search <query>"));
         source.sendSystemMessage(line("Info", "/hdb info <id>"));
-        source.sendSystemMessage(line("Give", "/hdb give <id> [amount] | /hdb give <id> \"Character Name\" [amount]"));
-        source.sendSystemMessage(line("Player", "/hdb player <name|uuid> [amount] | /hdb player <name|uuid> \"Character Name\" [amount]"));
-        source.sendSystemMessage(line("Admin", "/hdb status | refresh | verify"));
+        source.sendSystemMessage(line("Give", "/agivehead <id> <target|self> <amount> <reason>"));
+        source.sendSystemMessage(line("Player", "/agiveplayerhead <name|uuid> <target|self> <amount> <reason>"));
+        source.sendSystemMessage(line("Admin", "/aheaddbstatus | /arefreshheaddb <reason> | /averifyheaddb <reason>"));
         return 1;
     }
 
@@ -216,7 +277,13 @@ public final class HeadDbCommands {
         return 1;
     }
 
-    private int giveRemoteHead(CommandContext<CommandSourceStack> context, ServerPlayer target, int amount) {
+    private int giveRemoteHead(
+        CommandContext<CommandSourceStack> context,
+        ServerPlayer target,
+        int amount,
+        String reason,
+        boolean legacy
+    ) {
         if (!databaseAvailable(context.getSource())) {
             return 0;
         }
@@ -227,37 +294,67 @@ public final class HeadDbCommands {
             return 0;
         }
 
-        ItemStack stack = itemFactory.remoteHead(head.get(), amount);
-        giveStack(target, stack);
-        context.getSource().sendSystemMessage(success("Gave " + amount + "x " + head.get().name() + " to " + displayName(target) + "."));
-        if (context.getSource().getPlayer() != target) {
-            target.sendSystemMessage(success("Received " + head.get().name() + "."));
-        }
-        return 1;
+        warnLegacy(context.getSource(), legacy, GIVE_REMOTE.literal());
+        Head value = head.get();
+        Map<String, Object> parameters = Map.of(
+            "headId", value.id().display(),
+            "headName", value.name(),
+            "amount", amount,
+            "legacyAlias", legacy
+        );
+        return VantablackPermissions.adminCommands().execute(
+            context.getSource(),
+            GIVE_REMOTE,
+            invocation(target, parameters, reason),
+            () -> {
+                giveStack(target, itemFactory.remoteHead(value, amount));
+                if (context.getSource().getPlayer() != target) {
+                    target.sendSystemMessage(success("Received " + value.name() + "."));
+                }
+                return completed(GIVE_REMOTE, "headdb_remote_head_given", parameters);
+            }
+        );
     }
 
-    private int giveRemoteHeadToTarget(CommandContext<CommandSourceStack> context, int amount) {
+    private int giveRemoteHeadToTarget(CommandContext<CommandSourceStack> context, int amount, String reason, boolean legacy) {
         Optional<ServerPlayer> target = findTarget(context);
         if (target.isEmpty()) {
             return 0;
         }
-        return giveRemoteHead(context, target.get(), amount);
+        return giveRemoteHead(context, target.get(), amount, reason, legacy);
     }
 
-    private int givePlayerHead(CommandContext<CommandSourceStack> context, ServerPlayer target, int amount) {
+    private int givePlayerHead(
+        CommandContext<CommandSourceStack> context,
+        ServerPlayer target,
+        int amount,
+        String reason,
+        boolean legacy
+    ) {
         String player = getString(context, PLAYER_ARGUMENT);
-        ItemStack stack = itemFactory.playerHead(player, amount);
-        giveStack(target, stack);
-        context.getSource().sendSystemMessage(success("Gave " + amount + "x player head to " + displayName(target) + "."));
-        return 1;
+        warnLegacy(context.getSource(), legacy, GIVE_PLAYER.literal());
+        Map<String, Object> parameters = Map.of(
+            "playerHead", player,
+            "amount", amount,
+            "legacyAlias", legacy
+        );
+        return VantablackPermissions.adminCommands().execute(
+            context.getSource(),
+            GIVE_PLAYER,
+            invocation(target, parameters, reason),
+            () -> {
+                giveStack(target, itemFactory.playerHead(player, amount));
+                return completed(GIVE_PLAYER, "headdb_player_head_given", parameters);
+            }
+        );
     }
 
-    private int givePlayerHeadToTarget(CommandContext<CommandSourceStack> context, int amount) {
+    private int givePlayerHeadToTarget(CommandContext<CommandSourceStack> context, int amount, String reason, boolean legacy) {
         Optional<ServerPlayer> target = findTarget(context);
         if (target.isEmpty()) {
             return 0;
         }
-        return givePlayerHead(context, target.get(), amount);
+        return givePlayerHead(context, target.get(), amount, reason, legacy);
     }
 
     private static String displayName(ServerPlayer player) {
@@ -290,6 +387,14 @@ public final class HeadDbCommands {
             return Optional.empty();
         }
 
+        if (targetText.equalsIgnoreCase("self")) {
+            ServerPlayer self = context.getSource().getPlayer();
+            if (self == null) {
+                context.getSource().sendSystemMessage(error("Console must name an online target character."));
+                return Optional.empty();
+            }
+            return Optional.of(self);
+        }
         List<ServerPlayer> matches = context.getSource().getServer().getPlayerList().getPlayers().stream()
             .filter(player -> matchesTarget(player, targetText))
             .toList();
@@ -306,6 +411,22 @@ public final class HeadDbCommands {
 
     private java.util.concurrent.CompletableFuture<Suggestions> suggestTargets(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         List<String> names = new ArrayList<>();
+        for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
+            characterName(player)
+                .map(StringArgumentType::escapeIfRequired)
+                .ifPresent(name -> addUnique(names, name));
+        }
+        return SharedSuggestionProvider.suggest(names, builder);
+    }
+
+    private java.util.concurrent.CompletableFuture<Suggestions> suggestTargetsIncludingSelf(
+        CommandContext<CommandSourceStack> context,
+        SuggestionsBuilder builder
+    ) {
+        List<String> names = new ArrayList<>();
+        if (context.getSource().getPlayer() != null) {
+            names.add("self");
+        }
         for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
             characterName(player)
                 .map(StringArgumentType::escapeIfRequired)
@@ -340,37 +461,145 @@ public final class HeadDbCommands {
         }
     }
 
-    private int refresh(CommandContext<CommandSourceStack> context) {
-        CommandSourceStack source = context.getSource();
-        source.sendSystemMessage(line("HeadDB", "Remote refresh started."));
-        databaseService.refreshAsync().whenComplete((snapshot, throwable) -> source.getServer().execute(() -> {
-            if (throwable != null) {
-                source.sendSystemMessage(error(rootCause(throwable)));
-                return;
-            }
-            source.sendSystemMessage(success("HeadDB refreshed with " + snapshot.stats().heads() + " heads."));
-        }));
-        return 1;
+    private int refresh(CommandContext<CommandSourceStack> context, String reason, boolean legacy) {
+        warnLegacy(context.getSource(), legacy, REFRESH.literal());
+        Map<String, Object> parameters = Map.of("legacyAlias", legacy);
+        return VantablackPermissions.adminCommands().execute(
+            context.getSource(),
+            REFRESH,
+            AdminCommandInvocation.target("service", "headdb", "HeadDB", parameters, reason),
+            () -> databaseService.refreshAsync().thenApply(snapshot -> AdminCommandResult.success(
+                1,
+                "headdb_refreshed",
+                REFRESH.audit().successTemplate(),
+                Map.of("heads", snapshot.stats().heads(), "legacyAlias", legacy)
+            ))
+        );
     }
 
-    private int verify(CommandContext<CommandSourceStack> context) {
-        CommandSourceStack source = context.getSource();
-        source.sendSystemMessage(line("HeadDB", "Remote verification started."));
-        databaseService.verifyAsync().whenComplete((snapshot, throwable) -> source.getServer().execute(() -> {
-            if (throwable != null) {
-                source.sendSystemMessage(error(rootCause(throwable)));
-                return;
+    private int verify(CommandContext<CommandSourceStack> context, String reason, boolean legacy) {
+        warnLegacy(context.getSource(), legacy, VERIFY.literal());
+        Map<String, Object> parameters = Map.of("legacyAlias", legacy);
+        return VantablackPermissions.adminCommands().execute(
+            context.getSource(),
+            VERIFY,
+            AdminCommandInvocation.target("service", "headdb", "HeadDB", parameters, reason),
+            () -> databaseService.verifyAsync().thenApply(snapshot -> AdminCommandResult.success(
+                1,
+                "headdb_verified",
+                VERIFY.audit().successTemplate(),
+                Map.of("heads", snapshot.stats().heads(), "legacyAlias", legacy)
+            ))
+        );
+    }
+
+    private int auditedStatus(CommandContext<CommandSourceStack> context, String reason, boolean legacy) {
+        warnLegacy(context.getSource(), legacy, STATUS.literal());
+        Map<String, Object> parameters = Map.of("legacyAlias", legacy);
+        return VantablackPermissions.adminCommands().execute(
+            context.getSource(),
+            STATUS,
+            AdminCommandInvocation.target("service", "headdb", "HeadDB", parameters, reason),
+            () -> {
+                int commandResult = sendStatus(context);
+                DatabaseStatus status = databaseService.status();
+                return CompletableFuture.completedFuture(AdminCommandResult.success(
+                    commandResult,
+                    "headdb_status_viewed",
+                    STATUS.audit().successTemplate(),
+                    Map.of(
+                        "state", status.state().name(),
+                        "heads", status.stats().heads(),
+                        "legacyAlias", legacy
+                    )
+                ));
             }
-            source.sendSystemMessage(success("HeadDB remote verification passed with " + snapshot.stats().heads() + " heads."));
-        }));
-        return 1;
+        );
+    }
+
+    private boolean canReceiveHead(ServerPlayer player) {
+        return VantablackPermissions.allowed(player.createCommandSourceStack(), GIVE_REMOTE.permission());
+    }
+
+    private void giveGuiHead(ServerPlayer player, Head head) {
+        Map<String, Object> parameters = Map.of(
+            "headId", head.id().display(),
+            "headName", head.name(),
+            "amount", 1,
+            "origin", "gui"
+        );
+        VantablackPermissions.adminCommands().execute(
+            player.createCommandSourceStack(),
+            GIVE_REMOTE,
+            invocation(player, parameters, "HeadDB GUI grant"),
+            () -> {
+                giveStack(player, itemFactory.remoteHead(head, 1));
+                return completed(GIVE_REMOTE, "headdb_remote_head_given", parameters);
+            }
+        );
+    }
+
+    private static CompletableFuture<AdminCommandResult> completed(
+        AdminCommandDefinition definition,
+        String resultCode,
+        Map<String, Object> parameters
+    ) {
+        return CompletableFuture.completedFuture(AdminCommandResult.success(
+            1,
+            resultCode,
+            definition.audit().successTemplate(),
+            parameters
+        ));
+    }
+
+    private static AdminCommandInvocation invocation(ServerPlayer target, Map<String, Object> parameters, String reason) {
+        return AdminCommandInvocation.target(
+            "character",
+            target.getUUID().toString(),
+            displayName(target),
+            parameters,
+            reason
+        );
+    }
+
+    private static String legacyReason(String root, String subcommand) {
+        return "Legacy alias /" + root + " " + subcommand + "; migrate before 0.3.0.";
+    }
+
+    private static void warnLegacy(CommandSourceStack source, boolean legacy, String replacement) {
+        if (legacy) {
+            source.sendSystemMessage(Component.literal(
+                "Deprecated admin alias; use /" + replacement + ". This alias is removed in 0.3.0."
+            ).withStyle(ChatFormatting.YELLOW));
+        }
+    }
+
+    private static AdminCommandDefinition definition(
+        String id,
+        String literal,
+        String permission,
+        AdminCommandDefinition.Risk risk,
+        AdminCommandDefinition.ReasonPolicy reason,
+        String targetType,
+        String eventType,
+        String successTemplate
+    ) {
+        return new AdminCommandDefinition(
+            id,
+            literal,
+            permission,
+            risk,
+            reason,
+            targetType,
+            new AdminCommandDefinition.Audit(eventType, successTemplate, "vantablack.audit.admin.receive")
+        );
     }
 
     private boolean databaseAvailable(CommandSourceStack source) {
         if (databaseService.status().available()) {
             return true;
         }
-        source.sendSystemMessage(error("HeadDB database is not loaded yet. Run /hdb status or /hdb refresh."));
+        source.sendSystemMessage(error("HeadDB database is not loaded yet. Run /aheaddbstatus or /arefreshheaddb."));
         return false;
     }
 
@@ -421,15 +650,4 @@ public final class HeadDbCommands {
             .append(Component.literal(value).withStyle(ChatFormatting.WHITE));
     }
 
-    private static String rootCause(Throwable throwable) {
-        Throwable current = throwable;
-        while (current instanceof CompletionException && current.getCause() != null) {
-            current = current.getCause();
-        }
-        String message = current.getMessage();
-        if (message == null || message.isBlank()) {
-            return current.getClass().getSimpleName();
-        }
-        return message;
-    }
 }

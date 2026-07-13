@@ -3,6 +3,8 @@ package com.vantablack4.headdb;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 import io.github.silentdevelopment.headdb.model.Head;
 import io.github.silentdevelopment.headdb.query.HeadQuery;
@@ -13,8 +15,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permission;
-import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -45,14 +45,21 @@ final class HeadDbGuiService {
         37, 38, 39, 40, 41, 42, 43
     };
 
-    private final HeadDbConfig config;
     private final HeadDbDatabaseService databaseService;
     private final FabricHeadItemFactory itemFactory;
+    private final Predicate<ServerPlayer> canReceiveHead;
+    private final BiConsumer<ServerPlayer, Head> grantHead;
 
-    HeadDbGuiService(HeadDbConfig config, HeadDbDatabaseService databaseService, FabricHeadItemFactory itemFactory) {
-        this.config = Objects.requireNonNull(config, "config");
+    HeadDbGuiService(
+        HeadDbDatabaseService databaseService,
+        FabricHeadItemFactory itemFactory,
+        Predicate<ServerPlayer> canReceiveHead,
+        BiConsumer<ServerPlayer, Head> grantHead
+    ) {
         this.databaseService = Objects.requireNonNull(databaseService, "databaseService");
         this.itemFactory = Objects.requireNonNull(itemFactory, "itemFactory");
+        this.canReceiveHead = Objects.requireNonNull(canReceiveHead, "canReceiveHead");
+        this.grantHead = Objects.requireNonNull(grantHead, "grantHead");
     }
 
     int openDefault(ServerPlayer player) {
@@ -65,7 +72,7 @@ final class HeadDbGuiService {
 
     private int open(ServerPlayer player, String queryText, int requestedPage) {
         if (!databaseService.status().available()) {
-            player.sendSystemMessage(error("HeadDB database is not loaded yet. Run /hdb status or /hdb refresh."));
+            player.sendSystemMessage(error("HeadDB database is not loaded yet. Run /aheaddbstatus or /arefreshheaddb."));
             return 0;
         }
 
@@ -107,27 +114,11 @@ final class HeadDbGuiService {
     }
 
     private void giveHead(ServerPlayer player, Head head) {
-        if (!canReceiveHead(player)) {
-            player.sendSystemMessage(error("You need operator permission to receive heads from HeadDB."));
-            return;
-        }
-
-        ItemStack stack = itemFactory.remoteHead(head, 1);
-        giveStack(player, stack);
-        player.sendSystemMessage(success("Received " + head.name() + "."));
+        grantHead.accept(player, head);
     }
 
     private boolean canReceiveHead(ServerPlayer player) {
-        return player.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.byId(config.adminPermissionLevel())));
-    }
-
-    private void giveStack(ServerPlayer target, ItemStack stack) {
-        ItemStack remaining = stack.copy();
-        boolean inserted = target.getInventory().add(remaining);
-        if (!inserted && !remaining.isEmpty()) {
-            target.drop(remaining, false);
-        }
-        target.inventoryMenu.broadcastChanges();
+        return canReceiveHead.test(player);
     }
 
     private ItemStack displayHead(ServerPlayer viewer, Head head) {
@@ -143,7 +134,7 @@ final class HeadDbGuiService {
         }
         lore.add(canReceiveHead(viewer)
             ? Component.literal("Click to receive.").withStyle(ChatFormatting.GREEN)
-            : Component.literal("Operator permission required.").withStyle(ChatFormatting.RED));
+            : Component.literal("Head grant permission required.").withStyle(ChatFormatting.RED));
         stack.set(DataComponents.LORE, new ItemLore(lore));
         return stack;
     }

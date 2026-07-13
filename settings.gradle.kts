@@ -13,4 +13,9 @@ dependencyResolutionManagement {
     }
 }
 
+val permissions = listOf(file("../mod-permissions"), file("mod-permissions")).firstOrNull { it.isDirectory }
+if (permissions != null) {
+    includeBuild(permissions)
+}
+
 rootProject.name = "mod-headdb"
