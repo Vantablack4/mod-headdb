@@ -11,8 +11,7 @@
       "targetType": "character",
       "audit": {
         "eventType": "headdb.remote.give",
-        "successTemplate": "admcmd.headdb.remote.give",
-        "recipientPermission": "vantablack.audit.admin.receive"
+        "successTemplate": "admcmd.headdb.remote.give"
       },
       "legacyAliases": [
         {
@@ -34,8 +33,7 @@
       "targetType": "character",
       "audit": {
         "eventType": "headdb.player.give",
-        "successTemplate": "admcmd.headdb.player.give",
-        "recipientPermission": "vantablack.audit.admin.receive"
+        "successTemplate": "admcmd.headdb.player.give"
       },
       "legacyAliases": [
         {
@@ -57,8 +55,7 @@
       "targetType": "service",
       "audit": {
         "eventType": "headdb.refresh",
-        "successTemplate": "admcmd.headdb.refresh",
-        "recipientPermission": "vantablack.audit.admin.receive"
+        "successTemplate": "admcmd.headdb.refresh"
       },
       "legacyAliases": [
         {
@@ -80,8 +77,7 @@
       "targetType": "service",
       "audit": {
         "eventType": "headdb.verify",
-        "successTemplate": "admcmd.headdb.verify",
-        "recipientPermission": "vantablack.audit.admin.receive"
+        "successTemplate": "admcmd.headdb.verify"
       },
       "legacyAliases": [
         {
@@ -103,8 +99,7 @@
       "targetType": "service",
       "audit": {
         "eventType": "headdb.status",
-        "successTemplate": "admcmd.headdb.status",
-        "recipientPermission": "vantablack.audit.admin.receive"
+        "successTemplate": "admcmd.headdb.status"
       },
       "legacyAliases": [
         {
