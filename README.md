@@ -33,7 +33,9 @@ against online character names only. Each admin root has its own exact
 executor. The old `/hdb give`, `/hdb player`, `/hdb refresh`, `/hdb verify`, and
 `/hdb status` paths remain audited transition aliases through release `0.3.0`.
 Audit reasons on the canonical admin commands are optional. The legacy paths
-emit a migration warning and have no OP or command-level fallback.
+emit a migration warning and have no OP or command-level fallback. HeadDB
+executions are always recorded in the durable admin audit, but intentionally do
+not opt into the live in-game AdmCmd notification feed.
 
 ## Configuration
 

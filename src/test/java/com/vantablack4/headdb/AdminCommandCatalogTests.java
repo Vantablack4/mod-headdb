@@ -46,8 +46,7 @@ final class AdminCommandCatalogTests {
             JsonObject command = element.getAsJsonObject();
             assertThat(command.get("permission").getAsString()).startsWith("vantablack.command.a");
             assertThat(command.get("reason").getAsString()).isEqualTo("optional");
-            assertThat(command.getAsJsonObject("audit").get("recipientPermission").getAsString())
-                .isEqualTo("vantablack.audit.admin.receive");
+            assertThat(command.getAsJsonObject("audit").has("recipientPermission")).isFalse();
             assertThat(command.getAsJsonArray("legacyAliases")).hasSize(2);
             assertThat(command.getAsJsonArray("legacyAliases").asList()).allSatisfy(aliasElement ->
                 assertThat(aliasElement.getAsJsonObject().get("removeAfter").getAsString()).isEqualTo("0.3.0"));
