@@ -26,6 +26,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+      - name: Checkout mod-gateway dependency
+        uses: actions/checkout@v6
+        with:
+          repository: Vantablack4/mod-gateway
+          path: mod-gateway
+          token: ${{ secrets.REPO_ACCESS_TOKEN || github.token }}
+      - name: Checkout mod-characters dependency
+        uses: actions/checkout@v6
+        with:
+          repository: Vantablack4/mod-characters
+          path: mod-characters
+          token: ${{ secrets.REPO_ACCESS_TOKEN || github.token }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
