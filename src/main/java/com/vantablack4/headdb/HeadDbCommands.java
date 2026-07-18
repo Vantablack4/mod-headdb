@@ -586,8 +586,7 @@ public final class HeadDbCommands {
     }
 
     private static Predicate<CommandSourceStack> require(PermissionNode<Boolean> permission) {
-        Predicate<CommandSourceStack> playerPermission = PermissionPredicates.require(permission, false);
-        return source -> source.getPlayer() == null || playerPermission.test(source);
+        return PermissionPredicates.require(permission, false);
     }
 
     private boolean databaseAvailable(CommandSourceStack source) {
