@@ -28,14 +28,22 @@ This fork keeps the upstream Apache-2.0 API/core database engine and replaces th
 
 `/headdb` is registered as an alias. Players open the paginated GUI with `/hdb`;
 console callers receive text help/search output. Quoted command targets resolve
-against online character names only. Each admin root has its own exact
-`vantablack.command.*` platform permission and uses the shared durable audit
-executor. The old `/hdb give`, `/hdb player`, `/hdb refresh`, `/hdb verify`, and
-`/hdb status` paths remain audited transition aliases through release `0.3.0`.
-Audit reasons on the canonical admin commands are optional. The legacy paths
-emit a migration warning and have no OP or command-level fallback. HeadDB
-executions are always recorded in the durable admin audit, but intentionally do
-not opt into the live in-game AdmCmd notification feed.
+against online character names only. Each admin root declares its own native
+Fabric Permission API v1 node, evaluated by LuckPerms:
+
+```text
+vantablack.command.agivehead
+vantablack.command.agiveplayerhead
+vantablack.command.arefreshheaddb
+vantablack.command.averifyheaddb
+vantablack.command.aheaddbstatus
+```
+
+Grant these nodes directly to LuckPerms groups. The old `/hdb give`, `/hdb
+player`, `/hdb refresh`, `/hdb verify`, and `/hdb status` paths use the matching
+node and remain transition aliases through release `0.3.0`. Canonical commands
+continue to accept an optional trailing reason for command-line compatibility,
+but HeadDB does not persist or forward it. Console and RCON retain access.
 
 ## Configuration
 
