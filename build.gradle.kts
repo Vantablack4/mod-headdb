@@ -2,6 +2,22 @@ plugins {
     id("net.fabricmc.fabric-loom") version "1.16-SNAPSHOT"
 }
 
+repositories {
+    ivy {
+        name = "VantablackInternalMods"
+        url = uri("https://cdn.vantablack4.com/mods")
+        patternLayout {
+            artifact("[module]/[artifact]-[revision].[ext]")
+        }
+        metadataSources {
+            artifact()
+        }
+        content {
+            includeModule("com.vantablack4.mc", "mod-characters")
+        }
+    }
+}
+
 val minecraftVersion = property("minecraft_version").toString()
 val javaVersion = property("java_version").toString()
 val fabricLoaderVersion = property("fabric_loader_version").toString()
