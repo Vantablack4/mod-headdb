@@ -65,3 +65,8 @@ commands.search-result-limit=10
 ```
 
 The jar is produced under `build/libs/`.
+
+When a sibling `mod-characters` checkout is available, Gradle substitutes that
+source build automatically. Standalone and CI builds resolve the pinned
+immutable `mod-characters` release from `cdn.vantablack4.com`; they do not need
+credentials for another source repository.
