@@ -4,31 +4,56 @@ on:
   workflow_dispatch:
   pull_request:
     paths-ignore:
-      - ".github/**"
       - "**/*.md"
       - "docs/**"
   push:
     branches: [main, master]
     paths-ignore:
-      - ".github/**"
       - "**/*.md"
       - "docs/**"
 
 concurrency:
   group: mod-headdb-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v6
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mod_version="$(awk -F= '$1 == "mod_version" {print $2; exit}' gradle.properties)"
+          archives_base_name="$(awk -F= '$1 == "archives_base_name" {print $2; exit}' gradle.properties)"
+          [[ "$mod_version" =~ ^[0-9]+(\.[0-9]+)*$ ]] || { echo "mod_version must be X.Y.Z, got '$mod_version'" >&2; exit 1; }
+          version="${mod_version}+g${GITHUB_SHA:0:7}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "jar=build/libs/${archives_base_name:-mod-headdb}-${version}.jar" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew clean build
+      - name: Build and check
+        env:
+          ORG_GRADLE_PROJECT_publishVersion: ${{ steps.version.outputs.version }}
+        run: ./gradlew clean build
+      # mc-serverpack publishes this exact jar to R2 at release time
+      # (./mcw release mod-headdb), so keep it long enough to release
+      # any commit from the last month.
+      - name: Upload runtime jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-headdb-jar
+          path: ${{ steps.version.outputs.jar }}
+          if-no-files-found: error
+          retention-days: 30
+
