@@ -113,14 +113,6 @@ final class HeadDbGuiService {
         return databaseService.database().search(query);
     }
 
-    private void giveHead(ServerPlayer player, Head head) {
-        grantHead.accept(player, head);
-    }
-
-    private boolean canReceiveHead(ServerPlayer player) {
-        return canReceiveHead.test(player);
-    }
-
     private ItemStack displayHead(ServerPlayer viewer, Head head) {
         ItemStack stack = itemFactory.remoteHead(head, 1);
         List<Component> lore = new ArrayList<>();
@@ -132,7 +124,7 @@ final class HeadDbGuiService {
         if (!head.collections().isEmpty()) {
             lore.add(detailLine("Collections", String.join(", ", head.collections())));
         }
-        lore.add(canReceiveHead(viewer)
+        lore.add(canReceiveHead.test(viewer)
             ? Component.literal("Click to receive.").withStyle(ChatFormatting.GREEN)
             : Component.literal("Head grant permission required.").withStyle(ChatFormatting.RED));
         stack.set(DataComponents.LORE, new ItemLore(lore));
@@ -187,10 +179,6 @@ final class HeadDbGuiService {
         return Component.literal(label + ": ")
             .withStyle(ChatFormatting.GRAY)
             .append(Component.literal(value).withStyle(ChatFormatting.WHITE));
-    }
-
-    private static Component success(String value) {
-        return Component.literal(value).withStyle(ChatFormatting.GREEN);
     }
 
     private static Component error(String value) {
@@ -309,7 +297,7 @@ final class HeadDbGuiService {
 
             int resultIndex = resultIndex(slotId);
             if (resultIndex >= 0 && resultIndex < result.heads().size()) {
-                service.giveHead(viewer, result.heads().get(resultIndex));
+                service.grantHead.accept(viewer, result.heads().get(resultIndex));
             }
             return false;
         }

@@ -32,3 +32,13 @@ jobs:
           java-version: "25"
       - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew clean build
+
+      - name: Build release runtime jar
+        run: ./gradlew jar --console=plain --no-daemon
+      - name: Upload tested runtime jar
+        uses: actions/upload-artifact@v6
+        with:
+          name: mod-headdb-jar
+          path: build/libs/mod-headdb-0.2.9.jar
+          if-no-files-found: error
+          retention-days: 30
